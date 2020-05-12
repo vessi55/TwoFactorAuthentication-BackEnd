@@ -22,3 +22,18 @@ spring:
     url: jdbc:mysql://localhost:3306/two-factor-auth
     user: root
     password: root
+
+  mail:
+    host: smtp.office365.com
+    port: 587
+    username: twofactorauthProject@outlook.com
+    password: TUProject
+    protocol: smtp
+    tls: true
+    properties.mail.smtp:
+      auth: true
+      starttls.enable: true
+      ssl.trust: smtp.office365.com
+
+mail:
+  registerUrl: http://localhost:3000

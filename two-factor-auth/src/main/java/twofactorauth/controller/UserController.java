@@ -26,6 +26,6 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<UserRegistrationResponse> registerUser(@RequestBody @Valid UserRegistrationRequest user) {
-        return ResponseEntity.ok(userService.registerUser(user));
+        return ResponseEntity.ok(userService.saveUser(user));
     }
 }
