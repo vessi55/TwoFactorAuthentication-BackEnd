@@ -36,4 +36,5 @@ spring:
       ssl.trust: smtp.office365.com
 
 mail:
-  registerUrl: http://localhost:3000
+  registerUrl: http://localhost:3000/register/
+  projectTeam: The Two Factor Authentication Team

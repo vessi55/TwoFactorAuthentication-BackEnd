@@ -4,9 +4,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import twofactorauth.dto.UserInvitationRequest;
-import twofactorauth.dto.UserRegistrationRequest;
-import twofactorauth.dto.UserRegistrationResponse;
+import twofactorauth.dto.*;
 import twofactorauth.entity.Invitation;
 import twofactorauth.entity.User;
 import twofactorauth.enums.UserRole;
@@ -14,11 +12,12 @@ import twofactorauth.enums.UserStatus;
 import twofactorauth.exception.ElementAlreadyExistsException;
 import twofactorauth.exception.ElementNotFoundException;
 import twofactorauth.exception.PasswordsDoNotMatchException;
+import twofactorauth.exception.WrongCredentialsException;
 import twofactorauth.repository.UserRepository;
-import twofactorauth.util.mailContents.RegistrationMailContent;
 
 import javax.transaction.Transactional;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class UserService {
@@ -26,7 +25,13 @@ public class UserService {
     private static final String EMAIL_ALREADY_TAKEN = "Email is already taken by another user!";
     private static final String PHONE_NUMBER_ALREADY_TAKEN = "Phone Number is already taken by another user!";
     private static final String NOT_MATCHING_PASSWORDS = "Passwords do not match!";
-    private static final String USER_NOT_FOUND = "User Is Not Found!";
+    private static final String WRONG_CREDENTIALS = "Wrong credentials";
+
+    private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
+    private static final String USER_WITH_EMAIL_NOT_FOUND = "Not Found User With Email : ";
+    private static final String USER_WITH_ADMIN_NOT_FOUND = "Not Found User With Role ADMIN";
+
+    private static final Long EMAIL_REGISTER_LINK_EXPIRATION_TIME = TimeUnit.DAYS.toMillis(2);
 
     @Autowired
     private UserRepository userRepository;
@@ -35,29 +40,28 @@ public class UserService {
     private InvitationService invitationService;
 
     @Autowired
-    private MailService mailService;
-
-    @Autowired
     private ModelMapper modelMapper;
 
     @Transactional
-    public UserRegistrationResponse saveUser(UserRegistrationRequest userRegistrationRequest) {
+    public UserResponse registerUser(UserRegistrationRequest userRegistrationRequest) {
 
         checkIfEmailAlreadyTaken(userRegistrationRequest.getEmail());
         checkIfPhoneAlreadyTaken(userRegistrationRequest.getPhone());
         checkIfMatchingPasswords(userRegistrationRequest.getPassword(), userRegistrationRequest.getRepeatPassword());
 
-        User user;
-        Invitation invitation = invitationService.getInvitationByEmail(userRegistrationRequest.getEmail());
+        Invitation invitation = invitationService.findInvitationByEmail(userRegistrationRequest.getEmail());
         if (invitation == null) {
-            throw new ElementNotFoundException(USER_NOT_FOUND);
+            throw new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + userRegistrationRequest.getEmail());
         }
 
+        // invalidate 'setUp account' link in email after successful registration
+        invitation.setCreatedDate(System.currentTimeMillis() - EMAIL_REGISTER_LINK_EXPIRATION_TIME);
         invitation.setStatus(UserStatus.REGISTERED);
-        invitationService.saveInvitation(invitation);
-        user = saveUserInformation(userRegistrationRequest, invitation);
+        invitationService.save(invitation);
 
-        return modelMapper.map(user, UserRegistrationResponse.class);
+        User user = saveUserInformation(userRegistrationRequest, invitation);
+
+        return modelMapper.map(user, UserResponse.class);
     }
 
     private void checkIfEmailAlreadyTaken(String email) {
@@ -86,44 +90,27 @@ public class UserService {
                 .email(userRegistrationRequest.getEmail())
                 .phone(userRegistrationRequest.getPhone())
                 .password(userRegistrationRequest.getPassword())
+                .role(UserRole.USER)
                 .invitation(invitation).build();
 
         return userRepository.save(user);
     }
 
-    public User findUserByEmail(String email) {
-        Optional<User> user = userRepository.findByEmail(email);
-        return user.orElseThrow(() -> new ElementNotFoundException(USER_NOT_FOUND));
-    }
-
     public User findUserById(String id) {
         Optional<User> user = userRepository.findById(id);
-        return user.orElseThrow(() -> new ElementNotFoundException(USER_NOT_FOUND));
+        return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_ID_NOT_FOUND + id));
     }
 
     public User findUserByRoleAdmin() {
         Optional<User> user = userRepository.findByRole(UserRole.ADMIN);
-        return user.orElseThrow(() -> new ElementNotFoundException(USER_NOT_FOUND));
+        return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_ADMIN_NOT_FOUND));
     }
 
-    private Invitation saveInvitation(UserInvitationRequest userInvitationRequest) {
+    public UserResponse loginUser(UserLoginRequest userLoginRequest) {
 
-        Invitation invitation = invitationService.getInvitationByEmail(userInvitationRequest.getEmail());
-        if (invitation != null) {
-            throw new ElementAlreadyExistsException(EMAIL_ALREADY_TAKEN);
-        }
-        invitation = new Invitation(userInvitationRequest.getEmail(), UserRole.USER, UserStatus.INVITED);
-        return invitationService.saveInvitation(invitation);
-    }
+        User user = userRepository.findByEmailAndPassword(userLoginRequest.getEmail(), userLoginRequest.getPassword())
+                .orElseThrow(() -> new WrongCredentialsException(WRONG_CREDENTIALS));
 
-    @Transactional
-    public String sendInvitation(UserInvitationRequest userInvitationRequest) {
-        User admin = findUserByRoleAdmin();
-        String adminName = mailService.getUserName(admin.getEmail());
-
-        Invitation invitation = saveInvitation(userInvitationRequest);
-
-        mailService.sendRegistrationMail(invitation.getEmail(), new RegistrationMailContent(invitation.getEmail(), adminName));
-        return "Registration Email Is Sent Successfully!";
+        return modelMapper.map(user, UserResponse.class);
     }
 }

@@ -12,7 +12,19 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @ControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    @ExceptionHandler({ElementAlreadyExistsException.class, PasswordsDoNotMatchException.class})
+    @ExceptionHandler({Exception.class})
+    @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
+    private ResponseEntity<ErrorMessage> handleInternalServerError(Exception e) {
+        return new ResponseEntity<>(new ErrorMessage(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler({WrongCredentialsException.class})
+    @ResponseStatus(value = HttpStatus.UNAUTHORIZED)
+    public ResponseEntity<ErrorMessage> handleUnauthorized(Exception e) {
+        return new ResponseEntity<>(new ErrorMessage(e.getMessage()), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler({ElementAlreadyExistsException.class, PasswordsDoNotMatchException.class, NotAllowedException.class})
     @ResponseStatus(value = HttpStatus.BAD_REQUEST)
     private ResponseEntity<ErrorMessage> handleBadRequest(Exception e) {
         return new ResponseEntity<>(new ErrorMessage(e.getMessage()), HttpStatus.BAD_REQUEST);

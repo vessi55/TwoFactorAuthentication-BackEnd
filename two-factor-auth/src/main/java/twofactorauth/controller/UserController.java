@@ -7,8 +7,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import twofactorauth.dto.UserLoginRequest;
 import twofactorauth.dto.UserRegistrationRequest;
-import twofactorauth.dto.UserRegistrationResponse;
+import twofactorauth.dto.UserResponse;
 import twofactorauth.service.UserService;
 
 import javax.validation.Valid;
@@ -25,7 +26,12 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<UserRegistrationResponse> registerUser(@RequestBody @Valid UserRegistrationRequest user) {
-        return ResponseEntity.ok(userService.saveUser(user));
+    public ResponseEntity<UserResponse> registerUser(@RequestBody @Valid UserRegistrationRequest user) {
+        return ResponseEntity.ok(userService.registerUser(user));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<UserResponse> loginUser(@RequestBody @Valid UserLoginRequest user) {
+        return ResponseEntity.ok(userService.loginUser(user));
     }
 }

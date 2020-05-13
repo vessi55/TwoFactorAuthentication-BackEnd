@@ -9,7 +9,7 @@ import twofactorauth.enums.UserRole;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserRegistrationResponse {
+public class UserResponse {
 
     private String uid;
 
