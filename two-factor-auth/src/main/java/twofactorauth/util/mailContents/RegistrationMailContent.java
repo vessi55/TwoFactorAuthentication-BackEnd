@@ -10,4 +10,6 @@ public class RegistrationMailContent {
     private String email;
 
     private String adminName;
+
+    private String verificationCode;
 }

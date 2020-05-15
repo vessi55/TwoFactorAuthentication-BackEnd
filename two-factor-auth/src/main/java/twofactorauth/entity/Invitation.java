@@ -38,6 +38,10 @@ public class Invitation {
     @NonNull
     private UserStatus status;
 
+    @NonNull
+    @Column(name = "verification_code")
+    private String verificationCode;
+
     @PrePersist
     public void setCreatedDate() {
         this.createdDate = System.currentTimeMillis();

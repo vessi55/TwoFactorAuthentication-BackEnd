@@ -5,7 +5,6 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
@@ -25,14 +24,18 @@ public class UserRegistrationRequest {
     private String email;
 
     @NotBlank(message = "Password must not be empty!")
-    @Size(min = 6, message = "Length must be at least 6 symbols!")
+    @Size(min = 6, message = "Password Length must be at least 6 symbols!")
     private String password;
 
     @NotBlank(message = "Password must not be empty!")
-    @Size(min = 6, message = "Length must be at least 6 symbols!")
+    @Size(min = 6, message = "Password Length must be at least 6 symbols!")
     private String repeatPassword;
 
-    @NotNull
-    @Pattern(regexp = "(\\+)?(359|0)8[789]\\d{1}\\d{3}\\d{3}", message = "Invalid phone number!")
+    @NotBlank
+    @Pattern(regexp = "08[789]\\d{7}", message = "Invalid phone number!")
     private String phone;
+
+    @NotBlank
+    @Size(min = 6, max = 6, message = "Verification Code Length must be 6 symbols!")
+    private String verificationCode;
 }

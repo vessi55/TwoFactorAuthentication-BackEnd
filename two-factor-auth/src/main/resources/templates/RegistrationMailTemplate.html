@@ -346,10 +346,14 @@
                                                                 <table border="0" valign="top" cellspacing="0" cellpadding="0" width="100%" align="left" class="rnb-col-1">
                                                                     <tbody><tr>
                                                                         <td class="content-spacing" style="font-size:14px; font-family:'Comic Sans MS',cursive,sans-serif, sans-serif; color:#3c4858; line-height: 21px;">
-                                                                            <div style="height:20px"></div>
-                                                                            <div style="text-align: left;">P.S. For your security, this button link will expire in 24 hours or right after you set up your account.<br>
-                                                                            <br>Welcome aboard,<br>The Two Factor Authentication Team</div>
-                                                                            <div style="height:20px"></div>
+                                                                            <div style="text-align: center;"><span style="font-size:16px;">
+                                                                                <strong th:text="'Registration Verification Code : ' + ${verificationCode}"></strong></span>
+                                                                            </div>
+                                                                            <div style="text-align: center;">&nbsp;</div>
+                                                                            <div style="text-align: left;">P.S. For your security, this button link will expire in 24 hours or right after you set up your account.<br>&nbsp;</div>
+                                                                            <div style="text-align: left;">If you require any further information please don't hesitate to contact us.</div>
+                                                                            <div style="text-align: left;">&nbsp;</div>
+                                                                            <div style="text-align: left;">Welcome aboard,<br>The Two Factor Authentication Team</div>
                                                                         </td>
                                                                     </tr></tbody>
                                                                 </table>

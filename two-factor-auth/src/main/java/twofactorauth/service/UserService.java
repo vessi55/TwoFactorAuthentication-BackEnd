@@ -9,10 +9,7 @@ import twofactorauth.entity.Invitation;
 import twofactorauth.entity.User;
 import twofactorauth.enums.UserRole;
 import twofactorauth.enums.UserStatus;
-import twofactorauth.exception.ElementAlreadyExistsException;
-import twofactorauth.exception.ElementNotFoundException;
-import twofactorauth.exception.PasswordsDoNotMatchException;
-import twofactorauth.exception.WrongCredentialsException;
+import twofactorauth.exception.*;
 import twofactorauth.repository.UserRepository;
 
 import javax.transaction.Transactional;
@@ -26,6 +23,7 @@ public class UserService {
     private static final String PHONE_NUMBER_ALREADY_TAKEN = "Phone Number is already taken by another user!";
     private static final String NOT_MATCHING_PASSWORDS = "Passwords do not match!";
     private static final String WRONG_CREDENTIALS = "Wrong credentials";
+    private static final String INVALID_VERIFICATION_CODE = "Invalid Verification Code!";
 
     private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
     private static final String USER_WITH_EMAIL_NOT_FOUND = "Not Found User With Email : ";
@@ -49,10 +47,9 @@ public class UserService {
         checkIfPhoneAlreadyTaken(userRegistrationRequest.getPhone());
         checkIfMatchingPasswords(userRegistrationRequest.getPassword(), userRegistrationRequest.getRepeatPassword());
 
-        Invitation invitation = invitationService.findInvitationByEmail(userRegistrationRequest.getEmail());
-        if (invitation == null) {
-            throw new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + userRegistrationRequest.getEmail());
-        }
+        Invitation invitation = getInvitedUser(userRegistrationRequest);
+
+        checkIfVerificationCodeIsValid(userRegistrationRequest, invitation);
 
         // invalidate 'setUp account' link in email after successful registration
         invitation.setCreatedDate(System.currentTimeMillis() - EMAIL_REGISTER_LINK_EXPIRATION_TIME);
@@ -80,6 +77,20 @@ public class UserService {
         if (!password.equals(repeatPassword)) {
             throw new PasswordsDoNotMatchException(NOT_MATCHING_PASSWORDS);
         }
+    }
+
+    private void checkIfVerificationCodeIsValid(UserRegistrationRequest userRegistrationRequest, Invitation invitation) {
+        if(!userRegistrationRequest.getVerificationCode().equals(invitation.getVerificationCode())) {
+            throw new InvalidVerificationCodeException(INVALID_VERIFICATION_CODE);
+        }
+    }
+
+    private Invitation getInvitedUser(UserRegistrationRequest userRegistrationRequest) {
+        Invitation invitation = invitationService.findInvitationByEmail(userRegistrationRequest.getEmail());
+        if (invitation == null) {
+            throw new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + userRegistrationRequest.getEmail());
+        }
+        return invitation;
     }
 
     private User saveUserInformation(UserRegistrationRequest userRegistrationRequest, Invitation invitation) {

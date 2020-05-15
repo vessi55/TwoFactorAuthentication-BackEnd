@@ -3,7 +3,6 @@ package twofactorauth.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.MimeMessagePreparator;
@@ -22,11 +21,12 @@ public class MailService {
     private static final String MAIL_REGISTER_URL = "registerUrl";
     private static final String MAIL_PROJECT_TEAM = "projectTeam";
     private static final String MAIL_SERVICE = "mailService";
-    private static final String AUTO_EMAIL = "twofactorauthProject@outlook.com";
+    private static final String AUTO_EMAIL = "twofactorauthProject@outlook.co";
     private static final String SEND_MAIL_FAILURE = "Error with sending the email -> ";
 
     private static final String USER_EMAIL = "email";
     private static final String ADMIN_NAME = "adminName";
+    private static final String VERIFICATION_CODE = "verificationCode";
 
     private static final String REGISTRATION_MAIL_SUBJECT = "Registration";
 
@@ -53,6 +53,7 @@ public class MailService {
         Context context = new Context();
         context.setVariable(USER_EMAIL, registrationMailContent.getEmail());
         context.setVariable(ADMIN_NAME, registrationMailContent.getAdminName());
+        context.setVariable(VERIFICATION_CODE, registrationMailContent.getVerificationCode());
         context.setVariable(MAIL_REGISTER_URL, registerUrl);
         context.setVariable(MAIL_PROJECT_TEAM, projectTeam);
         context.setVariable(MAIL_SERVICE, this);
@@ -61,7 +62,7 @@ public class MailService {
     }
 
     @Async
-    public void sendRegistrationMail(RegistrationMailContent registrationMailContent) {
+    public void sendRegistrationMail(RegistrationMailContent registrationMailContent, Invitation invitation) {
 
         MimeMessagePreparator messagePreparator = mimeMessage -> {
             MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
@@ -73,14 +74,11 @@ public class MailService {
             messageHelper.setText(content, true);
         };
 
-        sendMail(messagePreparator);
-    }
-
-    private void sendMail(MimeMessagePreparator messagePreparator) {
-        try {
+        try{
             mailSender.send(messagePreparator);
-        } catch (MailException e) {
-            log.info(SEND_MAIL_FAILURE + e.getMessage());
+        }catch (Exception ex){
+            invitationService.delete(invitation);
+            log.error(SEND_MAIL_FAILURE + ex.getMessage());
         }
     }
 

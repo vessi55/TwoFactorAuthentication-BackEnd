@@ -21,15 +21,17 @@ public class User {
     @GenericGenerator(name = "system-uuid", strategy = "uuid2")
     private String uid;
 
+    @NonNull
     @Column(name = "first_name")
     private String firstName;
 
+    @NonNull
     @Column(name = "last_name")
     private String lastName;
 
+    @NonNull
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
-    @NonNull
     private UserRole role;
 
     @NonNull
@@ -43,8 +45,8 @@ public class User {
     @NonNull
     private String phone;
 
+    @NonNull
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "invitation_id", nullable = false, referencedColumnName = "uid")
-    @NonNull
     private Invitation invitation;
 }

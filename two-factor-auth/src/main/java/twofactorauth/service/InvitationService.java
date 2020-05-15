@@ -15,7 +15,6 @@ import twofactorauth.exception.NotAllowedException;
 import twofactorauth.repository.InvitationRepository;
 import twofactorauth.util.mailContents.RegistrationMailContent;
 
-import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -27,7 +26,11 @@ public class InvitationService {
     private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
     private static final String NOT_INVITED_USER = "Not Invited User With ID : ";
 
-    private static final String SEND_MAIL_SUCCESS = "Email is sent successfully!";
+    private static final int REGISTRATION_CODE_LENGTH = 6;
+
+    private static final String UPPERCASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String LOWERCASE_LETTERS  = "abcdefghijklmnopqrstuvxyz";
+    private static final String DIGITS = "0123456789";
 
     @Autowired
     private InvitationRepository invitationRepository;
@@ -45,6 +48,10 @@ public class InvitationService {
         invitationRepository.save(invitation);
     }
 
+    public void delete(Invitation invitation) {
+        invitationRepository.delete(invitation);
+    }
+
     public Invitation findInvitationById(String id) {
         Optional<Invitation> invitation = invitationRepository.findById(id);
         return invitation.orElseThrow(() -> new ElementNotFoundException(USER_WITH_ID_NOT_FOUND + id));
@@ -54,13 +61,29 @@ public class InvitationService {
         return invitationRepository.findByEmail(email).orElse(null);
     }
 
+    private String generateRegistrationVerificationCode() {
+
+        String alphaNumericString = UPPERCASE_LETTERS + LOWERCASE_LETTERS + DIGITS;
+
+        StringBuilder stringBuilder = new StringBuilder();
+
+        for (int i = 0; i < REGISTRATION_CODE_LENGTH; i++) {
+
+            int index = (int)(alphaNumericString.length() * Math.random());
+            stringBuilder.append(alphaNumericString.charAt(index));
+        }
+        return stringBuilder.toString();
+    }
+
     private Invitation saveInvitation(UserInvitationRequest userInvitationRequest) {
+
+        String verificationCode = generateRegistrationVerificationCode();
 
         Invitation invitation = findInvitationByEmail(userInvitationRequest.getEmail());
         if (invitation != null) {
             throw new ElementAlreadyExistsException(EMAIL_ALREADY_TAKEN);
         }
-        invitation = new Invitation(userInvitationRequest.getEmail(), UserRole.USER, UserStatus.INVITED);
+        invitation = new Invitation(userInvitationRequest.getEmail(), UserRole.USER, UserStatus.INVITED, verificationCode);
         return invitationRepository.save(invitation);
     }
 
@@ -69,20 +92,20 @@ public class InvitationService {
         return mailService.getUserName(admin.getUid());
     }
 
-    @Transactional
-    public String sendInvitationEmail(UserInvitationRequest userInvitationRequest) {
+    public void sendInvitationEmail(UserInvitationRequest userInvitationRequest) {
 
         String adminName = getAdminName();
 
         Invitation invitation = saveInvitation(userInvitationRequest);
 
-        mailService.sendRegistrationMail(new RegistrationMailContent(invitation.getEmail(), adminName));
-        return SEND_MAIL_SUCCESS;
+        mailService.sendRegistrationMail(new RegistrationMailContent
+                (invitation.getEmail(), adminName, invitation.getVerificationCode()), invitation);
     }
 
-    public String resendInvitationEmail(String invitationId) {
+    public void resendInvitationEmail(String invitationId) {
 
         String adminName = getAdminName();
+        String verificationCode = generateRegistrationVerificationCode();
 
         Invitation invitation = findInvitationById(invitationId);
         if (invitation.getStatus() != UserStatus.INVITED) {
@@ -91,10 +114,11 @@ public class InvitationService {
 
         // reedify 'setUp account' link in email after resend invitation email
         invitation.setCreatedDate(System.currentTimeMillis());
+        invitation.setVerificationCode(verificationCode);
         invitationRepository.save(invitation);
 
-        mailService.sendRegistrationMail(new RegistrationMailContent(invitation.getEmail(), adminName));
-        return SEND_MAIL_SUCCESS;
+        mailService.sendRegistrationMail(new RegistrationMailContent(
+                invitation.getEmail(), adminName, verificationCode), invitation);
     }
 
     public List<UserInvitationResponse> getAllInvitedUsers() {

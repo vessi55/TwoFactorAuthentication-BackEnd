@@ -18,13 +18,15 @@ public class AdminController {
     private InvitationService invitationService;
 
     @PostMapping("/sendInvitation")
-    public ResponseEntity<String> sendInvitationMail(@Valid @RequestBody UserInvitationRequest userInvitationRequest) {
-        return ResponseEntity.ok(invitationService.sendInvitationEmail(userInvitationRequest));
+    public ResponseEntity sendInvitationMail(@Valid @RequestBody UserInvitationRequest userInvitationRequest) {
+        invitationService.sendInvitationEmail(userInvitationRequest);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/resendInvitation/{invitationId}")
-    public ResponseEntity<String> resendInvitationEmail(@PathVariable("invitationId") String invitationId) {
-        return ResponseEntity.ok(invitationService.resendInvitationEmail(invitationId));
+    public ResponseEntity resendInvitationEmail(@PathVariable("invitationId") String invitationId) {
+        invitationService.resendInvitationEmail(invitationId);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/users")
