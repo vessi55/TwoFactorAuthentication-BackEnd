@@ -1,4 +1,4 @@
-package twofactorauth.dto;
+package twofactorauth.dto.user;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,10 +7,9 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserLoginRequest {
+public class LoginVerificationResponse {
 
-    private String email;
+    private String userUid;
 
-    private String password;
-
+    private String verificationCode;
 }

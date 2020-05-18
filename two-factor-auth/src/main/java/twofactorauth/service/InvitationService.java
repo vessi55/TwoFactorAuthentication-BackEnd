@@ -4,7 +4,10 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import twofactorauth.dto.*;
+import twofactorauth.dto.invitation.InvitationRequest;
+import twofactorauth.dto.invitation.InvitationResponse;
+import twofactorauth.dto.EmailLinkValidResponse;
+import twofactorauth.dto.user.UserRegistrationRequest;
 import twofactorauth.entity.Invitation;
 import twofactorauth.entity.User;
 import twofactorauth.enums.UserRole;
@@ -13,7 +16,7 @@ import twofactorauth.exception.ElementAlreadyExistsException;
 import twofactorauth.exception.ElementNotFoundException;
 import twofactorauth.exception.NotAllowedException;
 import twofactorauth.repository.InvitationRepository;
-import twofactorauth.util.mailContents.RegisterAndLoginMailContent;
+import twofactorauth.util.MailContent;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,8 +30,8 @@ public class InvitationService {
     private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
     private static final String USER_WITH_EMAIL_NOT_FOUND = "Not Found User With Email : ";
     private static final String NOT_INVITED_USER = "Not Invited User With ID : ";
-    private static final String INVITATION_ALREADY_DELETED = "Already deleted invitation with ID : ";
-    private static final String SUCCESSFULLY_DELETED_INVITATION_WITH_ID = "Successfully deleted invitation with ID : ";
+    private static final String INVITATION_DELETED = "Already Deleted Invitation With ID : ";
+    private static final String SUCCESSFULLY_DELETED_INVITATION = "Successfully deleted invitation with ID : ";
 
     private static final String UPPERCASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String LOWERCASE_LETTERS  = "abcdefghijklmnopqrstuvxyz";
@@ -62,7 +65,7 @@ public class InvitationService {
 
         Invitation invitation = findInvitationById(invitationId);
         if (invitation.isDeleted()) {
-            throw new NotAllowedException(INVITATION_ALREADY_DELETED);
+            throw new NotAllowedException(INVITATION_DELETED + invitationId);
         }
         invitation.setDeleted(true);
 
@@ -71,10 +74,12 @@ public class InvitationService {
             user.setDeleted(true);
             userService.save(user);
         } else {
+            // invalidate 'setUp account' link in email after deleted invitation
+            invitation.setCreatedDate(System.currentTimeMillis() - REGISTER_EMAIL_EXPIRATION_TIME);
             invitationRepository.save(invitation);
         }
 
-        return SUCCESSFULLY_DELETED_INVITATION_WITH_ID + invitationId;
+        return SUCCESSFULLY_DELETED_INVITATION + invitationId;
     }
 
     public Invitation findInvitationById(String id) {
@@ -83,7 +88,7 @@ public class InvitationService {
     }
 
     public Invitation findInvitationByEmail(String email) {
-        return invitationRepository.findByEmail(email).orElse(null);
+        return invitationRepository.findByEmailAndIsDeleted(email, false).orElse(null);
     }
 
     public Invitation getInvitedUser(UserRegistrationRequest userRegistrationRequest) {
@@ -131,7 +136,7 @@ public class InvitationService {
 
         Invitation invitation = saveInvitation(invitationRequest);
 
-        mailService.sendRegistrationMail(new RegisterAndLoginMailContent
+        mailService.sendRegistrationMail(new MailContent
                 (invitation.getEmail(), adminName, invitation.getVerificationCode()), invitation);
     }
 
@@ -144,17 +149,19 @@ public class InvitationService {
         if (invitation.getStatus() != UserStatus.INVITED) {
             throw new NotAllowedException(NOT_INVITED_USER + invitationId);
         }
-
+        if(invitation.isDeleted()) {
+            throw new ElementNotFoundException(INVITATION_DELETED + invitationId);
+        }
         // reedify 'setUp account' link in email after resend invitation email
         invitation.setCreatedDate(System.currentTimeMillis());
         invitation.setVerificationCode(verificationCode);
         invitationRepository.save(invitation);
 
-        mailService.sendRegistrationMail(new RegisterAndLoginMailContent(
+        mailService.sendRegistrationMail(new MailContent(
                 invitation.getEmail(), adminName, verificationCode), invitation);
     }
 
-    public RegisterUrlValidResponse checkIfEmailLinkIsValid(String invitationId) {
+    public EmailLinkValidResponse checkIfRegisterLinkIsValid(String invitationId) {
 
         Invitation invitation = findInvitationById(invitationId);
 
@@ -162,12 +169,12 @@ public class InvitationService {
         long expirationDate = invitation.getCreatedDate() + REGISTER_EMAIL_EXPIRATION_TIME;
         boolean isUrlExpired = currentDate >= expirationDate;
 
-        return new RegisterUrlValidResponse(invitation.getEmail(), isUrlExpired);
+        return new EmailLinkValidResponse(invitation.getEmail(), isUrlExpired);
     }
 
     public List<InvitationResponse> getAllInvitedUsers() {
 
-        List<Invitation> invitations = invitationRepository.findAllByRoleNotOrderByStatusAscEmailAsc(UserRole.ADMIN);
+        List<Invitation> invitations = invitationRepository.findAllByRoleNotAndIsDeletedOrderByStatusAscEmailAsc(UserRole.ADMIN, false);
 
         return invitations.stream()
                 .map(invitation -> modelMapper.map(invitation, InvitationResponse.class))

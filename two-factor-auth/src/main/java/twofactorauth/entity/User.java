@@ -35,7 +35,7 @@ public class User {
     private UserRole role;
 
     @NonNull
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String email;
 
     @NonNull
@@ -47,6 +47,9 @@ public class User {
 
     @Column(name = "is_deleted", nullable = false, columnDefinition = "tinyint default 0")
     private boolean isDeleted;
+
+    @Column(name = "password_reset_date")
+    private Long passwordResetDate;
 
     @NonNull
     @OneToOne(cascade = CascadeType.ALL)

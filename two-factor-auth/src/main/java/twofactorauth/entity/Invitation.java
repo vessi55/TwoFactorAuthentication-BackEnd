@@ -22,7 +22,7 @@ public class Invitation {
     private String uid;
 
     @NonNull
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String email;
 
     @Column(name = "created_date", nullable = false)

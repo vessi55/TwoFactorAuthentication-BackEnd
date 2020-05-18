@@ -4,7 +4,9 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import twofactorauth.dto.*;
+import twofactorauth.dto.EmailLinkValidResponse;
+import twofactorauth.dto.user.*;
+import twofactorauth.dto.user.password.ResetPasswordRequest;
 import twofactorauth.entity.Invitation;
 import twofactorauth.entity.LoginVerification;
 import twofactorauth.entity.User;
@@ -12,7 +14,7 @@ import twofactorauth.enums.UserRole;
 import twofactorauth.enums.UserStatus;
 import twofactorauth.exception.*;
 import twofactorauth.repository.UserRepository;
-import twofactorauth.util.mailContents.RegisterAndLoginMailContent;
+import twofactorauth.util.MailContent;
 
 import javax.transaction.Transactional;
 import java.util.Optional;
@@ -28,10 +30,14 @@ public class UserService {
     private static final String WRONG_CREDENTIALS = "Wrong credentials";
     private static final String INVALID_VERIFICATION_CODE = "Invalid Verification Code!";
 
+    private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
     private static final String USER_WITH_EMAIL_NOT_FOUND = "Not Found User With Email : ";
     private static final String ADMIN_NOT_FOUND = "Not Found User With Role ADMIN";
+    private static final String SUCCESSFULLY_CHANGED_PASSWORD = "Successfully Changed Password!";
 
-    private static final Long EMAIL_REGISTER_LINK_EXPIRATION_TIME = TimeUnit.DAYS.toMillis(2);
+    private static final Long REGISTER_EMAIL_EXPIRATION_TIME = TimeUnit.HOURS.toMillis(24);
+    private static final Long RESET_PASSWORD_EXPIRATION_TIME = TimeUnit.HOURS.toMillis(2);
+
     public static final int LOW_VALUE_VERIFICATION_CODE = 100;
     public static final int HIGH_VALUE_VERIFICATION_CODE = 999;
 
@@ -66,7 +72,7 @@ public class UserService {
         checkIfVerificationCodeIsValid(userRegistrationRequest, invitation);
 
         // invalidate 'setUp account' link in email after successful registration
-        invitation.setCreatedDate(System.currentTimeMillis() - EMAIL_REGISTER_LINK_EXPIRATION_TIME);
+        invitation.setCreatedDate(System.currentTimeMillis() - REGISTER_EMAIL_EXPIRATION_TIME);
         invitation.setStatus(UserStatus.REGISTERED);
         invitationService.save(invitation);
 
@@ -76,13 +82,13 @@ public class UserService {
     }
 
     private void checkIfEmailAlreadyTaken(String email) {
-        if (userRepository.findByEmail(email).isPresent()) {
+        if (userRepository.findByEmailAndIsDeleted(email, false).isPresent()) {
             throw new ElementAlreadyExistsException(EMAIL_ALREADY_TAKEN);
         }
     }
 
     private void checkIfPhoneAlreadyTaken(String phoneNumber) {
-        if (userRepository.findByPhone(phoneNumber).isPresent()) {
+        if (userRepository.findByPhoneAndIsDeleted(phoneNumber, false).isPresent()) {
             throw new ElementAlreadyExistsException(PHONE_NUMBER_ALREADY_TAKEN);
         }
     }
@@ -113,8 +119,13 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    public User findUserById(String id) {
+        Optional<User> user = userRepository.findByUidAndIsDeleted(id, false);
+        return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_ID_NOT_FOUND + id));
+    }
+
     public User findUserByEmail(String email) {
-        Optional<User> user = userRepository.findByEmail(email);
+        Optional<User> user = userRepository.findByEmailAndIsDeleted(email, false);
         return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + email));
     }
 
@@ -142,25 +153,64 @@ public class UserService {
         return new Random().nextInt(high - low) + low;
     }
 
+    private LoginVerification getLoginVerificationByUser(User user, Integer verificationCode) {
+
+        LoginVerification loginVerification = loginVerificationService.findLoginVerificationByUser(user);
+
+        if(loginVerification == null) {
+            loginVerification = new LoginVerification(verificationCode, user);
+        }
+        else {
+            loginVerification.setVerificationCode(verificationCode);
+            loginVerification.setLoginDate(System.currentTimeMillis());
+        }
+        return loginVerificationService.save(loginVerification);
+    }
+
     public LoginVerificationResponse sendVerificationEmail(String email) {
 
         User user = findUserByEmail(email);
         String formatUserName = user.getFirstName() + " " + user.getLastName();
+
         Integer verificationCode = generateLoginVerificationCode();
 
-        LoginVerification loginVerification = loginVerificationService.findLoginVerificationByUser(user);
-        if(loginVerification == null) {
-            loginVerification = new LoginVerification(verificationCode, user);
-        } else {
-            loginVerification.setVerificationCode(verificationCode);
-            loginVerification.setLoginDate(System.currentTimeMillis());
-        }
-        loginVerificationService.save(loginVerification);
+        LoginVerification loginVerification = getLoginVerificationByUser(user, verificationCode);
 
-        mailService.sendLoginVerificationMail(new RegisterAndLoginMailContent
+        mailService.sendLoginVerificationMail(new MailContent
                 (email, formatUserName, verificationCode.toString()));
 
         return modelMapper.map(loginVerification, LoginVerificationResponse.class);
+    }
 
+    public void sendResetPasswordEmail(String email) {
+
+        User user = findUserByEmail(email);
+        user.setPasswordResetDate(System.currentTimeMillis());
+
+        String formatUserName = user.getFirstName() + " " + user.getLastName();
+
+        mailService.sendForgottenPasswordMail(new MailContent(email, formatUserName));
+    }
+
+    public EmailLinkValidResponse checkIfResetPassLinkIsValid(String userId) {
+
+        User user = findUserById(userId);
+
+        long currentDate = System.currentTimeMillis();
+        long expirationDate = user.getPasswordResetDate() + RESET_PASSWORD_EXPIRATION_TIME;
+        boolean isUrlExpired = currentDate >= expirationDate;
+
+        return new EmailLinkValidResponse(user.getEmail(), isUrlExpired);
+    }
+
+    public String resetPassword(ResetPasswordRequest resetPasswordRequest) {
+
+        checkIfMatchingPasswords(resetPasswordRequest.getPassword(), resetPasswordRequest.getRepeatPassword());
+
+        User user = findUserById(resetPasswordRequest.getUid());
+        user.setPassword(resetPasswordRequest.getPassword());
+        userRepository.save(user);
+
+        return SUCCESSFULLY_CHANGED_PASSWORD;
     }
 }

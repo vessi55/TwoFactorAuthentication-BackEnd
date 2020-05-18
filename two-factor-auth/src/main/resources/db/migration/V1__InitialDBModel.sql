@@ -9,8 +9,7 @@ CREATE TABLE IF NOT EXISTS `two-factor-auth`.`invitations` (
   `email` VARCHAR(255) NOT NULL,
   `role` VARCHAR(10) NOT NULL,
   `status` VARCHAR(10) NOT NULL,
-  PRIMARY KEY (`uid`),
-  UNIQUE INDEX `UK_9iu98yyhhyc0nsjn0e82g99vi` (`email` ASC) VISIBLE)
+  PRIMARY KEY (`uid`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
 
@@ -27,7 +26,6 @@ CREATE TABLE IF NOT EXISTS `two-factor-auth`.`users` (
   `role` VARCHAR(20) NULL DEFAULT NULL,
   `invitation_id` VARCHAR(255) NOT NULL,
   PRIMARY KEY (`uid`),
-  UNIQUE INDEX `UK_6dotkott2kjsp8vw4d0m25fb7` (`email` ASC) VISIBLE,
   INDEX `FKgqerfu7jdu22eud6d8g88sin8` (`invitation_id` ASC) VISIBLE,
   CONSTRAINT `FKgqerfu7jdu22eud6d8g88sin8`
     FOREIGN KEY (`invitation_id`)

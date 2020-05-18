@@ -7,9 +7,9 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginVerificationResponse {
+public class EmailLinkValidResponse {
 
-    private String userUid;
+    private String email;
 
-    private String verificationCode;
+    private boolean isUrlExpired;
 }

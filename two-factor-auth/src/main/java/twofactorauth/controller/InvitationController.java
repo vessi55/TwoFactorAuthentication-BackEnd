@@ -4,9 +4,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import twofactorauth.dto.RegisterUrlValidResponse;
-import twofactorauth.dto.InvitationRequest;
-import twofactorauth.dto.InvitationResponse;
+import twofactorauth.dto.EmailLinkValidResponse;
+import twofactorauth.dto.invitation.InvitationRequest;
+import twofactorauth.dto.invitation.InvitationResponse;
 import twofactorauth.entity.Invitation;
 import twofactorauth.service.InvitationService;
 
@@ -33,6 +33,11 @@ public class InvitationController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/valid/{invitationId}")
+    public ResponseEntity<EmailLinkValidResponse> checkIfRegisterLinkIsValid(@PathVariable("invitationId") String invitationId) {
+        return ResponseEntity.ok(invitationService.checkIfRegisterLinkIsValid(invitationId));
+    }
+
     @GetMapping("/{invitationId}")
     public ResponseEntity<Invitation> getInvitationById(@PathVariable("invitationId") String invitationId) {
         return ResponseEntity.ok(invitationService.findInvitationById(invitationId));
@@ -41,11 +46,6 @@ public class InvitationController {
     @PutMapping("/{invitationId}")
     public ResponseEntity<String> deleteInvitationById(@PathVariable(value = "invitationId") String invitationId) {
         return ResponseEntity.ok(invitationService.deleteInvitationById(invitationId));
-    }
-
-    @GetMapping("/valid/{invitationId}")
-    public ResponseEntity<RegisterUrlValidResponse> checkIfEmailLinkIsValid(@PathVariable("invitationId") String invitationId) {
-        return ResponseEntity.ok(invitationService.checkIfEmailLinkIsValid(invitationId));
     }
 
     @GetMapping

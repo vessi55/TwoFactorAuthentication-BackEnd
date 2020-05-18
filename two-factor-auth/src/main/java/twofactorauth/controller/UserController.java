@@ -4,10 +4,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import twofactorauth.dto.LoginVerificationResponse;
-import twofactorauth.dto.UserLoginRequest;
-import twofactorauth.dto.UserRegistrationRequest;
-import twofactorauth.dto.UserResponse;
+import twofactorauth.dto.EmailLinkValidResponse;
+import twofactorauth.dto.user.*;
+import twofactorauth.dto.user.password.ResetPasswordEmailRequest;
+import twofactorauth.dto.user.password.ResetPasswordRequest;
 import twofactorauth.service.UserService;
 
 import javax.validation.Valid;
@@ -36,5 +36,21 @@ public class UserController {
     @PutMapping("/verify/{email}")
     public ResponseEntity<LoginVerificationResponse> sendVerificationEmail(@PathVariable(value = "email") String email) {
         return ResponseEntity.ok(userService.sendVerificationEmail(email));
+    }
+
+    @PostMapping("/reset")
+    public ResponseEntity sendResetPasswordEmail(@RequestBody @Valid ResetPasswordEmailRequest resetPasswordEmailRequest) {
+        userService.sendResetPasswordEmail(resetPasswordEmailRequest.getEmail());
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/reset/valid/{userId}")
+    public ResponseEntity<EmailLinkValidResponse> checkIfResetPassLinkIsValid(@PathVariable("userId") String userId) {
+        return ResponseEntity.ok(userService.checkIfResetPassLinkIsValid(userId));
+    }
+
+    @PutMapping("/reset")
+    public ResponseEntity<String> resetPassword(@RequestBody @Valid ResetPasswordRequest resetPasswordRequest) {
+        return ResponseEntity.ok(userService.resetPassword(resetPasswordRequest));
     }
 }

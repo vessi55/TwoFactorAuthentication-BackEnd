@@ -15,8 +15,8 @@ public class LoginVerificationService {
     @Autowired
     private LoginVerificationRepository loginVerificationRepository;
 
-    public void save(LoginVerification loginVerification) {
-        loginVerificationRepository.save(loginVerification);
+    public LoginVerification save(LoginVerification loginVerification) {
+        return loginVerificationRepository.save(loginVerification);
     }
 
     public LoginVerification findLoginVerificationByUser(User user) {

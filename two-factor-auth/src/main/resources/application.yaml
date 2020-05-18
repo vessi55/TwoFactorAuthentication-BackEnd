@@ -36,4 +36,4 @@ spring:
       ssl.trust: smtp.office365.com
 
 mail:
-  registerUrl: http://localhost:3000/register/
+  url: http://localhost:4200

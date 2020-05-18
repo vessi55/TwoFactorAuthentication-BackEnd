@@ -13,7 +13,7 @@ public interface InvitationRepository extends JpaRepository<Invitation, String> 
 
     Optional<Invitation> findById(String id);
 
-    Optional<Invitation> findByEmail(String email);
+    Optional<Invitation> findByEmailAndIsDeleted(String email, boolean isDeleted);
 
-    List<Invitation> findAllByRoleNotOrderByStatusAscEmailAsc(UserRole role);
+    List<Invitation> findAllByRoleNotAndIsDeletedOrderByStatusAscEmailAsc(UserRole role, boolean isDeleted);
 }

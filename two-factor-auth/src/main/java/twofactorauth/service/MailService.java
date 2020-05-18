@@ -13,14 +13,14 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import twofactorauth.entity.Invitation;
-import twofactorauth.util.mailContents.RegisterAndLoginMailContent;
+import twofactorauth.entity.User;
+import twofactorauth.util.MailContent;
 
 @Slf4j
 @Service
 public class MailService {
 
-    private static final String MAIL_REGISTER_URL = "registerUrl";
-    private static final String MAIL_PROJECT_TEAM = "projectTeam";
+    private static final String MAIL_URL = "mailUrl";
     private static final String MAIL_SERVICE = "mailService";
     private static final String AUTO_EMAIL = "twofactorauthProject@outlook.com";
     private static final String SEND_MAIL_FAILURE = "Error with sending the email -> ";
@@ -31,6 +31,11 @@ public class MailService {
 
     private static final String REGISTRATION_MAIL_SUBJECT = "Registration";
     private static final String LOGIN_VERIFICATION_MAIL_SUBJECT = "Login Verification";
+    private static final String FORGOTTEN_PASSWORD_MAIL_SUBJECT = "Forgotten Password";
+
+    public static final String REGISTRATION_MAIL_TEMPLATE = "RegistrationMailTemplate";
+    public static final String LOGIN_VERIFICATION_MAIL_TEMPLATE = "LoginVerificationMailTemplate";
+    public static final String FORGOTTEN_PASSWORD_MAIL_TEMPLATE = "ForgottenPasswordMailTemplate";
 
     @Autowired
     private UserService userService;
@@ -44,32 +49,43 @@ public class MailService {
     @Autowired
     private TemplateEngine templateEngine;
 
-    @Value("${mail.registerUrl}")
-    private String registerUrl;
+    @Value("${mail.url}")
+    private String mailUrl;
 
-    private String buildRegisterMailContent(RegisterAndLoginMailContent registerMailContent) {
+    private String buildRegisterMailContent(MailContent registerMailContent) {
 
         Context context = new Context();
         context.setVariable(USER_EMAIL, registerMailContent.getEmail());
         context.setVariable(USER_NAME, registerMailContent.getUserName());
         context.setVariable(VERIFICATION_CODE, registerMailContent.getVerificationCode());
-        context.setVariable(MAIL_REGISTER_URL, registerUrl);
+        context.setVariable(MAIL_URL, mailUrl);
         context.setVariable(MAIL_SERVICE, this);
 
-        return templateEngine.process("RegistrationMailTemplate", context);
+        return templateEngine.process(REGISTRATION_MAIL_TEMPLATE, context);
     }
 
-    private String buildLoginVerificationMailContent(RegisterAndLoginMailContent loginMailContent) {
+    private String buildLoginVerificationMailContent(MailContent loginMailContent) {
 
         Context context = new Context();
         context.setVariable(USER_NAME, loginMailContent.getUserName());
         context.setVariable(VERIFICATION_CODE, loginMailContent.getVerificationCode());
 
-        return templateEngine.process("LoginVerificationMailTemplate", context);
+        return templateEngine.process(LOGIN_VERIFICATION_MAIL_TEMPLATE, context);
+    }
+
+    private String buildForgottenPasswordMailContent(MailContent forgottenMailContent) {
+
+        Context context = new Context();
+        context.setVariable(USER_EMAIL, forgottenMailContent.getEmail());
+        context.setVariable(USER_NAME, forgottenMailContent.getUserName());
+        context.setVariable(MAIL_URL, mailUrl);
+        context.setVariable(MAIL_SERVICE, this);
+
+        return templateEngine.process(FORGOTTEN_PASSWORD_MAIL_TEMPLATE, context);
     }
 
     @Async
-    public void sendRegistrationMail(RegisterAndLoginMailContent registerMailContent, Invitation invitation) {
+    public void sendRegistrationMail(MailContent registerMailContent, Invitation invitation) {
 
         MimeMessagePreparator messagePreparator = mimeMessage -> {
             MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
@@ -90,7 +106,7 @@ public class MailService {
     }
 
     @Async
-    public void sendLoginVerificationMail(RegisterAndLoginMailContent loginMailContent) {
+    public void sendLoginVerificationMail(MailContent loginMailContent) {
 
         MimeMessagePreparator messagePreparator = mimeMessage -> {
             MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
@@ -109,8 +125,33 @@ public class MailService {
         }
     }
 
+    @Async
+    public void sendForgottenPasswordMail(MailContent forgottenPasswordMailContent) {
+
+        MimeMessagePreparator messagePreparator = mimeMessage -> {
+            MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
+            messageHelper.setSubject(FORGOTTEN_PASSWORD_MAIL_SUBJECT);
+            messageHelper.setFrom(AUTO_EMAIL);
+            messageHelper.setTo(forgottenPasswordMailContent.getEmail());
+
+            String content = buildForgottenPasswordMailContent(forgottenPasswordMailContent);
+            messageHelper.setText(content, true);
+        };
+
+        try{
+            mailSender.send(messagePreparator);
+        }catch (Exception ex){
+            log.error(SEND_MAIL_FAILURE + ex.getMessage());
+        }
+    }
+
     public String getRegisterUrl(String email) {
         Invitation invitation = invitationService.findInvitationByEmail(email);
-        return registerUrl + invitation.getUid();
+        return mailUrl + "/register/" + invitation.getUid();
+    }
+
+    public String getResetPasswordUrl(String email) {
+        User user = userService.findUserByEmail(email);
+        return mailUrl + "/reset-password/" + user.getUid();
     }
 }

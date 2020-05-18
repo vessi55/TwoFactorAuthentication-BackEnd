@@ -1,4 +1,4 @@
-package twofactorauth.dto;
+package twofactorauth.dto.user.password;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,9 +7,7 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterUrlValidResponse {
+public class ResetPasswordEmailRequest {
 
     private String email;
-
-    private boolean isUrlExpired;
 }
