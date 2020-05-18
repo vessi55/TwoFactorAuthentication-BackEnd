@@ -45,6 +45,9 @@ public class User {
     @NonNull
     private String phone;
 
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "tinyint default 0")
+    private boolean isDeleted;
+
     @NonNull
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "invitation_id", nullable = false, referencedColumnName = "uid")

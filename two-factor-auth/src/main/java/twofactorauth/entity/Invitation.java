@@ -39,8 +39,11 @@ public class Invitation {
     private UserStatus status;
 
     @NonNull
-    @Column(name = "verification_code")
+    @Column(name = "verification_code", nullable = false)
     private String verificationCode;
+
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "tinyint default 0")
+    private boolean isDeleted;
 
     @PrePersist
     public void setCreatedDate() {

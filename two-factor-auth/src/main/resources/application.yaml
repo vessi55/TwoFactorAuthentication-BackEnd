@@ -37,4 +37,3 @@ spring:
 
 mail:
   registerUrl: http://localhost:3000/register/
-  projectTeam: The Two Factor Authentication Team

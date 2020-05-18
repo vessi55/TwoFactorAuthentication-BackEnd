@@ -5,11 +5,11 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class RegistrationMailContent {
+public class RegisterAndLoginMailContent {
 
     private String email;
 
-    private String adminName;
+    private String userName;
 
     private String verificationCode;
 }

@@ -6,14 +6,17 @@ import org.springframework.stereotype.Service;
 
 import twofactorauth.dto.*;
 import twofactorauth.entity.Invitation;
+import twofactorauth.entity.LoginVerification;
 import twofactorauth.entity.User;
 import twofactorauth.enums.UserRole;
 import twofactorauth.enums.UserStatus;
 import twofactorauth.exception.*;
 import twofactorauth.repository.UserRepository;
+import twofactorauth.util.mailContents.RegisterAndLoginMailContent;
 
 import javax.transaction.Transactional;
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -25,11 +28,12 @@ public class UserService {
     private static final String WRONG_CREDENTIALS = "Wrong credentials";
     private static final String INVALID_VERIFICATION_CODE = "Invalid Verification Code!";
 
-    private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
     private static final String USER_WITH_EMAIL_NOT_FOUND = "Not Found User With Email : ";
-    private static final String USER_WITH_ADMIN_NOT_FOUND = "Not Found User With Role ADMIN";
+    private static final String ADMIN_NOT_FOUND = "Not Found User With Role ADMIN";
 
     private static final Long EMAIL_REGISTER_LINK_EXPIRATION_TIME = TimeUnit.DAYS.toMillis(2);
+    public static final int LOW_VALUE_VERIFICATION_CODE = 100;
+    public static final int HIGH_VALUE_VERIFICATION_CODE = 999;
 
     @Autowired
     private UserRepository userRepository;
@@ -38,7 +42,17 @@ public class UserService {
     private InvitationService invitationService;
 
     @Autowired
+    private MailService mailService;
+
+    @Autowired
+    private LoginVerificationService loginVerificationService;
+
+    @Autowired
     private ModelMapper modelMapper;
+
+    public void save(User user) {
+        userRepository.save(user);
+    }
 
     @Transactional
     public UserResponse registerUser(UserRegistrationRequest userRegistrationRequest) {
@@ -47,7 +61,7 @@ public class UserService {
         checkIfPhoneAlreadyTaken(userRegistrationRequest.getPhone());
         checkIfMatchingPasswords(userRegistrationRequest.getPassword(), userRegistrationRequest.getRepeatPassword());
 
-        Invitation invitation = getInvitedUser(userRegistrationRequest);
+        Invitation invitation = invitationService.getInvitedUser(userRegistrationRequest);
 
         checkIfVerificationCodeIsValid(userRegistrationRequest, invitation);
 
@@ -85,14 +99,6 @@ public class UserService {
         }
     }
 
-    private Invitation getInvitedUser(UserRegistrationRequest userRegistrationRequest) {
-        Invitation invitation = invitationService.findInvitationByEmail(userRegistrationRequest.getEmail());
-        if (invitation == null) {
-            throw new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + userRegistrationRequest.getEmail());
-        }
-        return invitation;
-    }
-
     private User saveUserInformation(UserRegistrationRequest userRegistrationRequest, Invitation invitation) {
 
         User user = User.builder()
@@ -107,14 +113,19 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public User findUserById(String id) {
-        Optional<User> user = userRepository.findById(id);
-        return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_ID_NOT_FOUND + id));
+    public User findUserByEmail(String email) {
+        Optional<User> user = userRepository.findByEmail(email);
+        return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + email));
     }
 
     public User findUserByRoleAdmin() {
         Optional<User> user = userRepository.findByRole(UserRole.ADMIN);
-        return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_ADMIN_NOT_FOUND));
+        return user.orElseThrow(() -> new ElementNotFoundException(ADMIN_NOT_FOUND));
+    }
+
+    public User findUserByInvitation(Invitation invitation) {
+        Optional<User> user = userRepository.findByInvitation(invitation);
+        return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + invitation.getEmail()));
     }
 
     public UserResponse loginUser(UserLoginRequest userLoginRequest) {
@@ -123,5 +134,33 @@ public class UserService {
                 .orElseThrow(() -> new WrongCredentialsException(WRONG_CREDENTIALS));
 
         return modelMapper.map(user, UserResponse.class);
+    }
+
+    private Integer generateLoginVerificationCode(){
+        int low = LOW_VALUE_VERIFICATION_CODE;
+        int high = HIGH_VALUE_VERIFICATION_CODE;
+        return new Random().nextInt(high - low) + low;
+    }
+
+    public LoginVerificationResponse sendVerificationEmail(String email) {
+
+        User user = findUserByEmail(email);
+        String formatUserName = user.getFirstName() + " " + user.getLastName();
+        Integer verificationCode = generateLoginVerificationCode();
+
+        LoginVerification loginVerification = loginVerificationService.findLoginVerificationByUser(user);
+        if(loginVerification == null) {
+            loginVerification = new LoginVerification(verificationCode, user);
+        } else {
+            loginVerification.setVerificationCode(verificationCode);
+            loginVerification.setLoginDate(System.currentTimeMillis());
+        }
+        loginVerificationService.save(loginVerification);
+
+        mailService.sendLoginVerificationMail(new RegisterAndLoginMailContent
+                (email, formatUserName, verificationCode.toString()));
+
+        return modelMapper.map(loginVerification, LoginVerificationResponse.class);
+
     }
 }

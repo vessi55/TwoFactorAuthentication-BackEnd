@@ -1,15 +1,15 @@
 package twofactorauth.dto;
 
-import javax.validation.constraints.Pattern;
-
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+import javax.validation.constraints.Pattern;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-public class UserInvitationRequest {
+@AllArgsConstructor
+public class InvitationRequest {
 
     @Pattern(regexp = ".+@.+\\.[a-z]+", message = "Invalid email address!")
     private String email;

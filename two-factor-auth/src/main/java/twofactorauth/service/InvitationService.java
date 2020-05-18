@@ -3,8 +3,8 @@ package twofactorauth.service;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import twofactorauth.dto.UserInvitationRequest;
-import twofactorauth.dto.UserInvitationResponse;
+
+import twofactorauth.dto.*;
 import twofactorauth.entity.Invitation;
 import twofactorauth.entity.User;
 import twofactorauth.enums.UserRole;
@@ -13,10 +13,11 @@ import twofactorauth.exception.ElementAlreadyExistsException;
 import twofactorauth.exception.ElementNotFoundException;
 import twofactorauth.exception.NotAllowedException;
 import twofactorauth.repository.InvitationRepository;
-import twofactorauth.util.mailContents.RegistrationMailContent;
+import twofactorauth.util.mailContents.RegisterAndLoginMailContent;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,13 +25,18 @@ public class InvitationService {
 
     private static final String EMAIL_ALREADY_TAKEN = "Email is already taken by another user!";
     private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
+    private static final String USER_WITH_EMAIL_NOT_FOUND = "Not Found User With Email : ";
     private static final String NOT_INVITED_USER = "Not Invited User With ID : ";
-
-    private static final int REGISTRATION_CODE_LENGTH = 6;
+    private static final String INVITATION_ALREADY_DELETED = "Already deleted invitation with ID : ";
+    private static final String SUCCESSFULLY_DELETED_INVITATION_WITH_ID = "Successfully deleted invitation with ID : ";
 
     private static final String UPPERCASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String LOWERCASE_LETTERS  = "abcdefghijklmnopqrstuvxyz";
     private static final String DIGITS = "0123456789";
+
+    private static final int REGISTRATION_CODE_LENGTH = 6;
+
+    private static final Long REGISTER_EMAIL_EXPIRATION_TIME = TimeUnit.HOURS.toMillis(24);
 
     @Autowired
     private InvitationRepository invitationRepository;
@@ -52,6 +58,25 @@ public class InvitationService {
         invitationRepository.delete(invitation);
     }
 
+    public String deleteInvitationById(String invitationId) {
+
+        Invitation invitation = findInvitationById(invitationId);
+        if (invitation.isDeleted()) {
+            throw new NotAllowedException(INVITATION_ALREADY_DELETED);
+        }
+        invitation.setDeleted(true);
+
+        if(invitation.getStatus() == UserStatus.REGISTERED) {
+            User user = userService.findUserByInvitation(invitation);
+            user.setDeleted(true);
+            userService.save(user);
+        } else {
+            invitationRepository.save(invitation);
+        }
+
+        return SUCCESSFULLY_DELETED_INVITATION_WITH_ID + invitationId;
+    }
+
     public Invitation findInvitationById(String id) {
         Optional<Invitation> invitation = invitationRepository.findById(id);
         return invitation.orElseThrow(() -> new ElementNotFoundException(USER_WITH_ID_NOT_FOUND + id));
@@ -59,6 +84,19 @@ public class InvitationService {
 
     public Invitation findInvitationByEmail(String email) {
         return invitationRepository.findByEmail(email).orElse(null);
+    }
+
+    public Invitation getInvitedUser(UserRegistrationRequest userRegistrationRequest) {
+        Invitation invitation = findInvitationByEmail(userRegistrationRequest.getEmail());
+        if (invitation == null) {
+            throw new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + userRegistrationRequest.getEmail());
+        }
+        return invitation;
+    }
+
+    private String getAdminName() {
+        User admin = userService.findUserByRoleAdmin();
+        return admin.getFirstName() + " " + admin.getLastName();
     }
 
     private String generateRegistrationVerificationCode() {
@@ -75,30 +113,25 @@ public class InvitationService {
         return stringBuilder.toString();
     }
 
-    private Invitation saveInvitation(UserInvitationRequest userInvitationRequest) {
+    private Invitation saveInvitation(InvitationRequest invitationRequest) {
 
         String verificationCode = generateRegistrationVerificationCode();
 
-        Invitation invitation = findInvitationByEmail(userInvitationRequest.getEmail());
+        Invitation invitation = findInvitationByEmail(invitationRequest.getEmail());
         if (invitation != null) {
             throw new ElementAlreadyExistsException(EMAIL_ALREADY_TAKEN);
         }
-        invitation = new Invitation(userInvitationRequest.getEmail(), UserRole.USER, UserStatus.INVITED, verificationCode);
+        invitation = new Invitation(invitationRequest.getEmail(), UserRole.USER, UserStatus.INVITED, verificationCode);
         return invitationRepository.save(invitation);
     }
 
-    private String getAdminName() {
-        User admin = userService.findUserByRoleAdmin();
-        return mailService.getUserName(admin.getUid());
-    }
-
-    public void sendInvitationEmail(UserInvitationRequest userInvitationRequest) {
+    public void sendInvitationEmail(InvitationRequest invitationRequest) {
 
         String adminName = getAdminName();
 
-        Invitation invitation = saveInvitation(userInvitationRequest);
+        Invitation invitation = saveInvitation(invitationRequest);
 
-        mailService.sendRegistrationMail(new RegistrationMailContent
+        mailService.sendRegistrationMail(new RegisterAndLoginMailContent
                 (invitation.getEmail(), adminName, invitation.getVerificationCode()), invitation);
     }
 
@@ -117,16 +150,27 @@ public class InvitationService {
         invitation.setVerificationCode(verificationCode);
         invitationRepository.save(invitation);
 
-        mailService.sendRegistrationMail(new RegistrationMailContent(
+        mailService.sendRegistrationMail(new RegisterAndLoginMailContent(
                 invitation.getEmail(), adminName, verificationCode), invitation);
     }
 
-    public List<UserInvitationResponse> getAllInvitedUsers() {
+    public RegisterUrlValidResponse checkIfEmailLinkIsValid(String invitationId) {
+
+        Invitation invitation = findInvitationById(invitationId);
+
+        long currentDate = System.currentTimeMillis();
+        long expirationDate = invitation.getCreatedDate() + REGISTER_EMAIL_EXPIRATION_TIME;
+        boolean isUrlExpired = currentDate >= expirationDate;
+
+        return new RegisterUrlValidResponse(invitation.getEmail(), isUrlExpired);
+    }
+
+    public List<InvitationResponse> getAllInvitedUsers() {
 
         List<Invitation> invitations = invitationRepository.findAllByRoleNotOrderByStatusAscEmailAsc(UserRole.ADMIN);
 
         return invitations.stream()
-                .map(invitation -> modelMapper.map(invitation, UserInvitationResponse.class))
+                .map(invitation -> modelMapper.map(invitation, InvitationResponse.class))
                 .collect(Collectors.toList());
     }
 }

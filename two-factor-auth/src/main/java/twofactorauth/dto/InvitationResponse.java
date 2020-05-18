@@ -7,10 +7,11 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserLoginRequest {
+public class InvitationResponse {
+
+    private String uid;
 
     private String email;
 
-    private String password;
-
+    private String status;
 }

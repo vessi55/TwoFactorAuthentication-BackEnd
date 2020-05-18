@@ -2,6 +2,8 @@ package twofactorauth.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import twofactorauth.entity.Invitation;
 import twofactorauth.entity.User;
 import twofactorauth.enums.UserRole;
 
@@ -17,4 +19,6 @@ public interface UserRepository extends JpaRepository<User, String> {
     Optional<User> findByRole(UserRole role);
 
     Optional<User> findByEmailAndPassword(String email, String password);
+
+    Optional<User> findByInvitation(Invitation invitation);
 }
