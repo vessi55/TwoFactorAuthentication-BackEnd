@@ -6,11 +6,12 @@ import org.springframework.web.bind.annotation.*;
 
 import twofactorauth.dto.EmailLinkValidResponse;
 import twofactorauth.dto.user.*;
-import twofactorauth.dto.user.password.ResetPasswordEmailRequest;
-import twofactorauth.dto.user.password.ResetPasswordRequest;
+import twofactorauth.dto.user.ResetPasswordEmailRequest;
+import twofactorauth.dto.user.ResetPasswordRequest;
 import twofactorauth.service.UserService;
 
 import javax.validation.Valid;
+import java.io.IOException;
 
 @RestController
 @CrossOrigin
@@ -34,8 +35,13 @@ public class UserController {
     }
 
     @PutMapping("/verify/{email}")
-    public ResponseEntity<LoginVerificationResponse> sendVerificationEmail(@PathVariable(value = "email") String email) {
-        return ResponseEntity.ok(userService.sendVerificationEmail(email));
+    public ResponseEntity<LoginVerificationResponse> sendLoginVerificationEmail(@PathVariable(value = "email") String email) {
+        return ResponseEntity.ok(userService.sendLoginVerificationEmail(email));
+    }
+
+    @PutMapping("/verify/phone/{phone}")
+    public ResponseEntity<LoginVerificationResponse> sendLoginVerificationSMS(@PathVariable(value = "phone") String phone) throws IOException {
+        return ResponseEntity.ok(userService.sendLoginVerificationSMS(phone));
     }
 
     @PostMapping("/reset")

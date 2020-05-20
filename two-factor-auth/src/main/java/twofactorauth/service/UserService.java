@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 
 import twofactorauth.dto.EmailLinkValidResponse;
 import twofactorauth.dto.user.*;
-import twofactorauth.dto.user.password.ResetPasswordRequest;
+import twofactorauth.dto.user.ResetPasswordRequest;
 import twofactorauth.entity.Invitation;
 import twofactorauth.entity.LoginVerification;
 import twofactorauth.entity.User;
@@ -32,8 +32,10 @@ public class UserService {
 
     private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
     private static final String USER_WITH_EMAIL_NOT_FOUND = "Not Found User With Email : ";
+    private static final String USER_WITH_PHONE_NOT_FOUND = "Not Found User With Phone Number : ";
     private static final String ADMIN_NOT_FOUND = "Not Found User With Role ADMIN";
     private static final String SUCCESSFULLY_CHANGED_PASSWORD = "Successfully Changed Password!";
+    private static final String RESET_PASSWORD_EMAIL_NOT_SENT = "Reset password email has not been sent to user with ID : ";
 
     private static final Long REGISTER_EMAIL_EXPIRATION_TIME = TimeUnit.HOURS.toMillis(24);
     private static final Long RESET_PASSWORD_EXPIRATION_TIME = TimeUnit.HOURS.toMillis(2);
@@ -49,6 +51,9 @@ public class UserService {
 
     @Autowired
     private MailService mailService;
+
+    @Autowired
+    private SMSService smsService;
 
     @Autowired
     private LoginVerificationService loginVerificationService;
@@ -129,6 +134,11 @@ public class UserService {
         return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + email));
     }
 
+    public User findUserByPhone(String phone) {
+        Optional<User> user = userRepository.findByPhoneAndIsDeleted(phone, false);
+        return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_PHONE_NOT_FOUND + phone));
+    }
+
     public User findUserByRoleAdmin() {
         Optional<User> user = userRepository.findByRole(UserRole.ADMIN);
         return user.orElseThrow(() -> new ElementNotFoundException(ADMIN_NOT_FOUND));
@@ -147,15 +157,11 @@ public class UserService {
         return modelMapper.map(user, UserResponse.class);
     }
 
-    private Integer generateLoginVerificationCode(){
-        int low = LOW_VALUE_VERIFICATION_CODE;
-        int high = HIGH_VALUE_VERIFICATION_CODE;
-        return new Random().nextInt(high - low) + low;
-    }
-
-    private LoginVerification getLoginVerificationByUser(User user, Integer verificationCode) {
+    private LoginVerification getLoginVerificationByUser(User user) {
 
         LoginVerification loginVerification = loginVerificationService.findLoginVerificationByUser(user);
+
+        String verificationCode = String.valueOf(new Random().nextInt(HIGH_VALUE_VERIFICATION_CODE) + LOW_VALUE_VERIFICATION_CODE);
 
         if(loginVerification == null) {
             loginVerification = new LoginVerification(verificationCode, user);
@@ -167,17 +173,25 @@ public class UserService {
         return loginVerificationService.save(loginVerification);
     }
 
-    public LoginVerificationResponse sendVerificationEmail(String email) {
+    public LoginVerificationResponse sendLoginVerificationEmail(String email) {
 
         User user = findUserByEmail(email);
         String formatUserName = user.getFirstName() + " " + user.getLastName();
 
-        Integer verificationCode = generateLoginVerificationCode();
+        LoginVerification loginVerification = getLoginVerificationByUser(user);
 
-        LoginVerification loginVerification = getLoginVerificationByUser(user, verificationCode);
+        mailService.sendLoginVerificationMail(new MailContent(email, formatUserName, loginVerification.getVerificationCode()));
 
-        mailService.sendLoginVerificationMail(new MailContent
-                (email, formatUserName, verificationCode.toString()));
+        return modelMapper.map(loginVerification, LoginVerificationResponse.class);
+    }
+
+    public LoginVerificationResponse sendLoginVerificationSMS(String phone) {
+
+        User user = findUserByPhone(phone);
+
+        LoginVerification loginVerification = getLoginVerificationByUser(user);
+
+        smsService.sendLoginVerificationSMS(user.getPhone(), loginVerification.getVerificationCode());
 
         return modelMapper.map(loginVerification, LoginVerificationResponse.class);
     }
@@ -192,9 +206,17 @@ public class UserService {
         mailService.sendForgottenPasswordMail(new MailContent(email, formatUserName));
     }
 
+    private void checkResetPasswordDate(User user) {
+        if (user.getPasswordResetDate() == null) {
+            throw new NotAllowedException(RESET_PASSWORD_EMAIL_NOT_SENT + user.getUid());
+        }
+    }
+
     public EmailLinkValidResponse checkIfResetPassLinkIsValid(String userId) {
 
         User user = findUserById(userId);
+
+        checkResetPasswordDate(user);
 
         long currentDate = System.currentTimeMillis();
         long expirationDate = user.getPasswordResetDate() + RESET_PASSWORD_EXPIRATION_TIME;
@@ -208,6 +230,9 @@ public class UserService {
         checkIfMatchingPasswords(resetPasswordRequest.getPassword(), resetPasswordRequest.getRepeatPassword());
 
         User user = findUserById(resetPasswordRequest.getUid());
+
+        checkResetPasswordDate(user);
+
         user.setPassword(resetPasswordRequest.getPassword());
         userRepository.save(user);
 

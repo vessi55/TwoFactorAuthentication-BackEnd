@@ -23,7 +23,7 @@ public class LoginVerification {
 
     @NonNull
     @Column(name = "verification_code", nullable = false)
-    private Integer verificationCode;
+    private String verificationCode;
 
     @NonNull
     @OneToOne(cascade = CascadeType.ALL)

@@ -1,4 +1,4 @@
-package twofactorauth.dto.user.password;
+package twofactorauth.dto.user;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
