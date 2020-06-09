@@ -6,8 +6,8 @@ spring:
   datasource:
     driverClassName: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/two-factor-auth?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
-    username: root
-    password: root
+    username: ${DATASOURCE_USERNAME}
+    password: ${DATASOURCE_PASSWORD}
     initialization-mode: always
 
   jpa:
@@ -20,14 +20,14 @@ spring:
   flyway:
     enabled: true
     url: jdbc:mysql://localhost:3306/two-factor-auth
-    user: root
-    password: root
+    user: ${DATASOURCE_USERNAME}
+    password: ${DATASOURCE_PASSWORD}
 
   mail:
     host: smtp.office365.com
     port: 587
-    username: twofactorauthProject@outlook.com
-    password: TUProject
+    username: ${MAIL_NAME}
+    password: ${MAIL_PASSWORD}
     protocol: smtp
     tls: true
     properties.mail.smtp:

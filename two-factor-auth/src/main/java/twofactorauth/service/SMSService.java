@@ -9,9 +9,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class SMSService {
 
-    private static final String ACCOUNT_SID = "ACc291ba97aabcdb032770360da0ab93a5";
-    private static final String AUTH_TOKEN = "98248b0382c39fdcaf0559b006ebc699";
-    private static final String AUTO_PHONE_NUMBER = "+12513069400";
+    private static final String ACCOUNT_SID = System.getenv("TWILIO_ACCOUNT_SID");
+    private static final String AUTH_TOKEN = System.getenv("TWILIO_AUTH_TOKEN");
+    private static final String AUTO_PHONE_NUMBER = System.getenv("TWILIO_PHONE_NUMBER");
+
     private static final String TWO_FACTOR_AUTHENTICATION_CODE = "Your Two Factor Authentication Code Is : ";
 
     static {

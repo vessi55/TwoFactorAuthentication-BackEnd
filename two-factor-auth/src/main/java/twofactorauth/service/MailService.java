@@ -20,9 +20,9 @@ import twofactorauth.util.MailContent;
 @Service
 public class MailService {
 
+    private static final String AUTO_EMAIL = System.getenv("MAIL_NAME");
     private static final String MAIL_URL = "mailUrl";
     private static final String MAIL_SERVICE = "mailService";
-    private static final String AUTO_EMAIL = "twofactorauthProject@outlook.com";
     private static final String SEND_MAIL_FAILURE = "Error with sending the email -> ";
 
     private static final String USER_EMAIL = "email";

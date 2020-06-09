@@ -52,4 +52,9 @@ public class InvitationController {
     public ResponseEntity<List<InvitationResponse>> getAllInvitedUsers() {
         return ResponseEntity.ok(invitationService.getAllInvitedUsers());
     }
+
+    @GetMapping("/archive")
+    public ResponseEntity<List<InvitationResponse>> getUsersArchive() {
+        return ResponseEntity.ok(invitationService.getUsersArchive());
+    }
 }

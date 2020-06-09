@@ -34,7 +34,7 @@ public class UserController {
         return ResponseEntity.ok(userService.loginUser(user));
     }
 
-    @PutMapping("/verify/{email}")
+    @PutMapping("/verify/email/{email}")
     public ResponseEntity<LoginVerificationResponse> sendLoginVerificationEmail(@PathVariable(value = "email") String email) {
         return ResponseEntity.ok(userService.sendLoginVerificationEmail(email));
     }

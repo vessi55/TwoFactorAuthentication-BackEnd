@@ -16,4 +16,6 @@ public interface InvitationRepository extends JpaRepository<Invitation, String> 
     Optional<Invitation> findByEmailAndIsDeleted(String email, boolean isDeleted);
 
     List<Invitation> findAllByRoleNotAndIsDeletedOrderByStatusAscEmailAsc(UserRole role, boolean isDeleted);
+
+    List<Invitation> findAllByIsDeletedOrderByEmailAsc(boolean isDeleted);
 }

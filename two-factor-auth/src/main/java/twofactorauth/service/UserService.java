@@ -27,7 +27,7 @@ public class UserService {
     private static final String EMAIL_ALREADY_TAKEN = "Email is already taken by another user!";
     private static final String PHONE_NUMBER_ALREADY_TAKEN = "Phone Number is already taken by another user!";
     private static final String NOT_MATCHING_PASSWORDS = "Passwords do not match!";
-    private static final String WRONG_CREDENTIALS = "Wrong credentials";
+    private static final String WRONG_CREDENTIALS = "Wrong Credentials";
     private static final String INVALID_VERIFICATION_CODE = "Invalid Verification Code!";
 
     private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
@@ -39,9 +39,6 @@ public class UserService {
 
     private static final Long REGISTER_EMAIL_EXPIRATION_TIME = TimeUnit.HOURS.toMillis(24);
     private static final Long RESET_PASSWORD_EXPIRATION_TIME = TimeUnit.HOURS.toMillis(2);
-
-    public static final int LOW_VALUE_VERIFICATION_CODE = 100;
-    public static final int HIGH_VALUE_VERIFICATION_CODE = 999;
 
     @Autowired
     private UserRepository userRepository;
@@ -157,28 +154,12 @@ public class UserService {
         return modelMapper.map(user, UserResponse.class);
     }
 
-    private LoginVerification getLoginVerificationByUser(User user) {
-
-        LoginVerification loginVerification = loginVerificationService.findLoginVerificationByUser(user);
-
-        String verificationCode = String.valueOf(new Random().nextInt(HIGH_VALUE_VERIFICATION_CODE) + LOW_VALUE_VERIFICATION_CODE);
-
-        if(loginVerification == null) {
-            loginVerification = new LoginVerification(verificationCode, user);
-        }
-        else {
-            loginVerification.setVerificationCode(verificationCode);
-            loginVerification.setLoginDate(System.currentTimeMillis());
-        }
-        return loginVerificationService.save(loginVerification);
-    }
-
     public LoginVerificationResponse sendLoginVerificationEmail(String email) {
 
         User user = findUserByEmail(email);
         String formatUserName = user.getFirstName() + " " + user.getLastName();
 
-        LoginVerification loginVerification = getLoginVerificationByUser(user);
+        LoginVerification loginVerification = loginVerificationService.getLoginVerificationByUser(user);
 
         mailService.sendLoginVerificationMail(new MailContent(email, formatUserName, loginVerification.getVerificationCode()));
 
@@ -189,7 +170,7 @@ public class UserService {
 
         User user = findUserByPhone(phone);
 
-        LoginVerification loginVerification = getLoginVerificationByUser(user);
+        LoginVerification loginVerification = loginVerificationService.getLoginVerificationByUser(user);
 
         smsService.sendLoginVerificationSMS(user.getPhone(), loginVerification.getVerificationCode());
 

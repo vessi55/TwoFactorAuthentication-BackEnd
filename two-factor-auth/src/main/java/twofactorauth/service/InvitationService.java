@@ -29,7 +29,7 @@ public class InvitationService {
     private static final String EMAIL_ALREADY_TAKEN = "Email is already taken by another user!";
     private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
     private static final String USER_WITH_EMAIL_NOT_FOUND = "Not Found User With Email : ";
-    private static final String NOT_INVITED_USER = "Not Invited User With ID : ";
+    private static final String USER_ALREADY_REGISTERED = "Already Registered User With Email : ";
     private static final String INVITATION_DELETED = "Already Deleted Invitation With ID : ";
     private static final String SUCCESSFULLY_DELETED_INVITATION = "Successfully deleted invitation with ID : ";
 
@@ -147,7 +147,7 @@ public class InvitationService {
 
         Invitation invitation = findInvitationById(invitationId);
         if (invitation.getStatus() != UserStatus.INVITED) {
-            throw new NotAllowedException(NOT_INVITED_USER + invitationId);
+            throw new NotAllowedException(USER_ALREADY_REGISTERED + invitation.getEmail());
         }
         if(invitation.isDeleted()) {
             throw new ElementNotFoundException(INVITATION_DELETED + invitationId);
@@ -176,6 +176,17 @@ public class InvitationService {
 
         List<Invitation> invitations = invitationRepository.findAllByRoleNotAndIsDeletedOrderByStatusAscEmailAsc(UserRole.ADMIN, false);
 
+        return getInvitationResponses(invitations);
+    }
+
+    public List<InvitationResponse> getUsersArchive() {
+
+        List<Invitation> invitations = invitationRepository.findAllByIsDeletedOrderByEmailAsc(true);
+
+        return getInvitationResponses(invitations);
+    }
+
+    private List<InvitationResponse> getInvitationResponses(List<Invitation> invitations) {
         return invitations.stream()
                 .map(invitation -> modelMapper.map(invitation, InvitationResponse.class))
                 .collect(Collectors.toList());
