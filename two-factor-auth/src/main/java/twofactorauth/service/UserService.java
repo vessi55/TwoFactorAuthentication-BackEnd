@@ -1,9 +1,14 @@
 package twofactorauth.service;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import twofactorauth.config.JwtTokenUtil;
 import twofactorauth.dto.EmailLinkValidResponse;
 import twofactorauth.dto.user.*;
 import twofactorauth.dto.user.ResetPasswordRequest;
@@ -18,7 +23,6 @@ import twofactorauth.util.MailContent;
 
 import javax.transaction.Transactional;
 import java.util.Optional;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -29,7 +33,7 @@ public class UserService {
     private static final String NOT_MATCHING_PASSWORDS = "Passwords do not match!";
     private static final String WRONG_CREDENTIALS = "Wrong Credentials";
     private static final String INVALID_VERIFICATION_CODE = "Invalid Verification Code!";
-
+    private static final String TOKEN_HAS_EXPIRED = "Token has expired";
     private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
     private static final String USER_WITH_EMAIL_NOT_FOUND = "Not Found User With Email : ";
     private static final String USER_WITH_PHONE_NOT_FOUND = "Not Found User With Phone Number : ";
@@ -56,10 +60,28 @@ public class UserService {
     private LoginVerificationService loginVerificationService;
 
     @Autowired
+    private JwtUserDetailsService jwtUserDetailsService;
+
+    @Autowired
+    private JwtTokenUtil jwtTokenUtil;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
     private ModelMapper modelMapper;
 
     public void save(User user) {
         userRepository.save(user);
+    }
+
+    private UserResponse getUserResponse(User user) {
+
+        final UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(user.getEmail());
+
+        UserResponse userResponse = modelMapper.map(user, UserResponse.class);
+        userResponse.setToken(jwtTokenUtil.generateToken(userDetails));
+        return userResponse;
     }
 
     @Transactional
@@ -80,7 +102,7 @@ public class UserService {
 
         User user = saveUserInformation(userRegistrationRequest, invitation);
 
-        return modelMapper.map(user, UserResponse.class);
+        return getUserResponse(user);
     }
 
     private void checkIfEmailAlreadyTaken(String email) {
@@ -114,7 +136,7 @@ public class UserService {
                 .lastName(userRegistrationRequest.getLastName())
                 .email(userRegistrationRequest.getEmail())
                 .phone(userRegistrationRequest.getPhone())
-                .password(userRegistrationRequest.getPassword())
+                .password(passwordEncoder.encode(userRegistrationRequest.getPassword()))
                 .role(UserRole.USER)
                 .invitation(invitation).build();
 
@@ -148,10 +170,22 @@ public class UserService {
 
     public UserResponse loginUser(UserLoginRequest userLoginRequest) {
 
-        User user = userRepository.findByEmailAndPassword(userLoginRequest.getEmail(), userLoginRequest.getPassword())
-                .orElseThrow(() -> new WrongCredentialsException(WRONG_CREDENTIALS));
+        User user = userRepository.findByEmailAndIsDeleted(userLoginRequest.getEmail(), false)
+                .orElseThrow(() -> new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + userLoginRequest.getEmail()));
 
-        return modelMapper.map(user, UserResponse.class);
+        try {
+            authenticate(userLoginRequest, user);
+        } catch (ExpiredJwtException e) {
+            throw new TokenExpiredException(TOKEN_HAS_EXPIRED);
+        }
+
+        return getUserResponse(user);
+    }
+
+    private void authenticate(UserLoginRequest userLoginRequest, User user) {
+        if (!passwordEncoder.matches(userLoginRequest.getPassword(), user.getPassword())) {
+            throw new BadCredentialsException(WRONG_CREDENTIALS);
+        }
     }
 
     public LoginVerificationResponse sendLoginVerificationEmail(String email) {

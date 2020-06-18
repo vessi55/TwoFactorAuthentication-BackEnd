@@ -15,6 +15,7 @@ import java.io.IOException;
 
 @RestController
 @CrossOrigin
+@RequestMapping("/users")
 public class UserController {
 
     private final UserService userService;
@@ -44,7 +45,7 @@ public class UserController {
         return ResponseEntity.ok(userService.sendLoginVerificationSMS(phone));
     }
 
-    @PostMapping("/reset")
+    @PostMapping("/send/reset")
     public ResponseEntity sendResetPasswordEmail(@RequestBody @Valid ResetPasswordEmailRequest resetPasswordEmailRequest) {
         userService.sendResetPasswordEmail(resetPasswordEmailRequest.getEmail());
         return ResponseEntity.ok().build();

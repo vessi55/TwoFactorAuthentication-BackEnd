@@ -2,6 +2,7 @@ package twofactorauth.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import twofactorauth.dto.EmailLinkValidResponse;
@@ -13,9 +14,10 @@ import twofactorauth.service.InvitationService;
 import javax.validation.Valid;
 import java.util.List;
 
+@CrossOrigin
 @RestController
 @RequestMapping("/invitations")
-@CrossOrigin
+@PreAuthorize("hasRole('ADMIN')")
 public class InvitationController {
 
     @Autowired
@@ -34,11 +36,13 @@ public class InvitationController {
     }
 
     @GetMapping("/valid/{invitationId}")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<EmailLinkValidResponse> checkIfRegisterLinkIsValid(@PathVariable("invitationId") String invitationId) {
         return ResponseEntity.ok(invitationService.checkIfRegisterLinkIsValid(invitationId));
     }
 
     @GetMapping("/{invitationId}")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<Invitation> getInvitationById(@PathVariable("invitationId") String invitationId) {
         return ResponseEntity.ok(invitationService.findInvitationById(invitationId));
     }
