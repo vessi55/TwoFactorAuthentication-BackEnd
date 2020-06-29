@@ -32,10 +32,12 @@ public class MailService {
     private static final String REGISTRATION_MAIL_SUBJECT = "Registration";
     private static final String LOGIN_VERIFICATION_MAIL_SUBJECT = "Login Verification";
     private static final String FORGOTTEN_PASSWORD_MAIL_SUBJECT = "Forgotten Password";
+    private static final String WELCOME_BACK_MAIL_SUBJECT = "Welcome Back";
 
     public static final String REGISTRATION_MAIL_TEMPLATE = "RegistrationMailTemplate";
     public static final String LOGIN_VERIFICATION_MAIL_TEMPLATE = "LoginVerificationMailTemplate";
     public static final String FORGOTTEN_PASSWORD_MAIL_TEMPLATE = "ForgottenPasswordMailTemplate";
+    public static final String WELCOME_BACK_MAIL_TEMPLATE = "WelcomeBackMailTemplate";
 
     @Autowired
     private UserService userService;
@@ -82,6 +84,16 @@ public class MailService {
         context.setVariable(MAIL_SERVICE, this);
 
         return templateEngine.process(FORGOTTEN_PASSWORD_MAIL_TEMPLATE, context);
+    }
+
+    private String buildWelcomeBackMailContent(MailContent welcomeBackMailContent) {
+
+        Context context = new Context();
+        context.setVariable(USER_NAME, welcomeBackMailContent.getUserName());
+        context.setVariable(MAIL_URL, mailUrl);
+        context.setVariable(MAIL_SERVICE, this);
+
+        return templateEngine.process(WELCOME_BACK_MAIL_TEMPLATE, context);
     }
 
     @Async
@@ -145,6 +157,26 @@ public class MailService {
         }
     }
 
+    @Async
+    public void sendWelcomeBackMail(MailContent welcomeBackMailContent) {
+
+        MimeMessagePreparator messagePreparator = mimeMessage -> {
+            MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
+            messageHelper.setSubject(WELCOME_BACK_MAIL_SUBJECT);
+            messageHelper.setFrom(AUTO_EMAIL);
+            messageHelper.setTo(welcomeBackMailContent.getEmail());
+
+            String content = buildWelcomeBackMailContent(welcomeBackMailContent);
+            messageHelper.setText(content, true);
+        };
+
+        try{
+            mailSender.send(messagePreparator);
+        }catch (Exception ex){
+            log.error(SEND_MAIL_FAILURE + ex.getMessage());
+        }
+    }
+
     public String getRegisterUrl(String email) {
         Invitation invitation = invitationService.findInvitationByEmail(email);
         return mailUrl + "/register/" + invitation.getUid();
@@ -153,5 +185,9 @@ public class MailService {
     public String getResetPasswordUrl(String email) {
         User user = userService.findUserByEmail(email);
         return mailUrl + "/reset-password/" + user.getUid();
+    }
+
+    public String getLoginUrl() {
+        return mailUrl + "/login";
     }
 }

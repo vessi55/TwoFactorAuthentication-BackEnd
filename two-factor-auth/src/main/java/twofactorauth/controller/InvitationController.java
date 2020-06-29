@@ -24,15 +24,13 @@ public class InvitationController {
     private InvitationService invitationService;
 
     @PostMapping("/send")
-    public ResponseEntity sendInvitationMail(@Valid @RequestBody InvitationRequest invitationRequest) {
-        invitationService.sendInvitationEmail(invitationRequest);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<String> sendInvitationMail(@Valid @RequestBody InvitationRequest invitationRequest) {
+        return ResponseEntity.ok(invitationService.sendInvitationEmail(invitationRequest));
     }
 
     @PutMapping("/resend/{invitationId}")
-    public ResponseEntity resendInvitationEmail(@PathVariable("invitationId") String invitationId) {
-        invitationService.resendInvitationEmail(invitationId);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<String> resendInvitationEmail(@PathVariable("invitationId") String invitationId) {
+        return ResponseEntity.ok(invitationService.resendInvitationEmail(invitationId));
     }
 
     @GetMapping("/valid/{invitationId}")
@@ -50,6 +48,11 @@ public class InvitationController {
     @PutMapping("/{invitationId}")
     public ResponseEntity<String> deleteInvitationById(@PathVariable(value = "invitationId") String invitationId) {
         return ResponseEntity.ok(invitationService.deleteInvitationById(invitationId));
+    }
+
+    @PutMapping("/recover/{invitationId}")
+    public ResponseEntity<String> recoverDeletedUser(@PathVariable("invitationId") String invitationId) {
+        return ResponseEntity.ok(invitationService.recoverInvitationById(invitationId));
     }
 
     @GetMapping

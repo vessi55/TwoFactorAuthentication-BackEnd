@@ -5,6 +5,7 @@ import javax.persistence.*;
 
 import org.hibernate.annotations.GenericGenerator;
 
+import twofactorauth.enums.UserGender;
 import twofactorauth.enums.UserRole;
 
 @Data
@@ -33,6 +34,11 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private UserRole role;
+
+    @NonNull
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private UserGender gender;
 
     @NonNull
     @Column(nullable = false)

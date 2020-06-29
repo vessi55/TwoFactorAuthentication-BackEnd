@@ -18,6 +18,7 @@ import twofactorauth.exception.NotAllowedException;
 import twofactorauth.repository.InvitationRepository;
 import twofactorauth.util.MailContent;
 
+import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +32,9 @@ public class InvitationService {
     private static final String USER_WITH_EMAIL_NOT_FOUND = "Not Found User With Email : ";
     private static final String USER_ALREADY_REGISTERED = "Already Registered User With Email : ";
     private static final String INVITATION_DELETED = "Already Deleted Invitation With ID : ";
+    private static final String NOT_DELETED_INVITATION = "Not Deleted Invitation !";
     private static final String SUCCESSFULLY_DELETED_INVITATION = "Successfully deleted invitation with ID : ";
+    private static final String SUCCESSFULLY_SENT_INVITATION_EMAIL = "Invitation Email is Sent Successfully ! ";
 
     private static final String UPPERCASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String LOWERCASE_LETTERS  = "abcdefghijklmnopqrstuvxyz";
@@ -59,27 +62,6 @@ public class InvitationService {
 
     public void delete(Invitation invitation) {
         invitationRepository.delete(invitation);
-    }
-
-    public String deleteInvitationById(String invitationId) {
-
-        Invitation invitation = findInvitationById(invitationId);
-        if (invitation.isDeleted()) {
-            throw new NotAllowedException(INVITATION_DELETED + invitationId);
-        }
-        invitation.setDeleted(true);
-
-        if(invitation.getStatus() == UserStatus.REGISTERED) {
-            User user = userService.findUserByInvitation(invitation);
-            user.setDeleted(true);
-            userService.save(user);
-        } else {
-            // invalidate 'setUp account' link in email after deleted invitation
-            invitation.setCreatedDate(System.currentTimeMillis() - REGISTER_EMAIL_EXPIRATION_TIME);
-            invitationRepository.save(invitation);
-        }
-
-        return SUCCESSFULLY_DELETED_INVITATION + invitationId;
     }
 
     public Invitation findInvitationById(String id) {
@@ -130,7 +112,7 @@ public class InvitationService {
         return invitationRepository.save(invitation);
     }
 
-    public void sendInvitationEmail(InvitationRequest invitationRequest) {
+    public String sendInvitationEmail(InvitationRequest invitationRequest) {
 
         String adminName = getAdminName();
 
@@ -138,9 +120,11 @@ public class InvitationService {
 
         mailService.sendRegistrationMail(new MailContent
                 (invitation.getEmail(), adminName, invitation.getVerificationCode()), invitation);
+
+        return SUCCESSFULLY_SENT_INVITATION_EMAIL;
     }
 
-    public void resendInvitationEmail(String invitationId) {
+    public String resendInvitationEmail(String invitationId) {
 
         String adminName = getAdminName();
         String verificationCode = generateRegistrationVerificationCode();
@@ -159,6 +143,16 @@ public class InvitationService {
 
         mailService.sendRegistrationMail(new MailContent(
                 invitation.getEmail(), adminName, verificationCode), invitation);
+
+        return SUCCESSFULLY_SENT_INVITATION_EMAIL;
+    }
+
+    public String sendWelcomeBackEmail(User user) {
+        String name = user.getFirstName() + " " + user.getLastName();
+
+        mailService.sendWelcomeBackMail(new MailContent(user.getEmail(), name));
+
+        return SUCCESSFULLY_SENT_INVITATION_EMAIL;
     }
 
     public EmailLinkValidResponse checkIfRegisterLinkIsValid(String invitationId) {
@@ -170,6 +164,54 @@ public class InvitationService {
         boolean isUrlExpired = currentDate >= expirationDate;
 
         return new EmailLinkValidResponse(invitation.getEmail(), isUrlExpired);
+    }
+
+    public String deleteInvitationById(String invitationId) {
+
+        Invitation invitation = findInvitationById(invitationId);
+        if (invitation.isDeleted()) {
+            throw new NotAllowedException(INVITATION_DELETED + invitationId);
+        }
+        invitation.setDeleted(true);
+
+        if(invitation.getStatus() == UserStatus.REGISTERED) {
+            User user = userService.findUserByInvitation(invitation);
+            if(user != null) {
+                user.setDeleted(true);
+                userService.save(user);
+            } else {
+                throw new ElementNotFoundException(USER_WITH_ID_NOT_FOUND + invitationId);
+            }
+        } else {
+            // invalidate 'setUp account' link in email after deleted invitation
+            invitation.setCreatedDate(System.currentTimeMillis() - REGISTER_EMAIL_EXPIRATION_TIME);
+            invitationRepository.save(invitation);
+        }
+
+        return SUCCESSFULLY_DELETED_INVITATION + invitationId;
+    }
+
+    @Transactional
+    public String recoverInvitationById(String invitationId) {
+
+        Invitation invitation = findInvitationById(invitationId);
+
+        if (!invitation.isDeleted()) {
+            throw new NotAllowedException(NOT_DELETED_INVITATION);
+        }
+        invitation.setDeleted(false);
+
+        if(invitation.getStatus() == UserStatus.REGISTERED) {
+            User user = userService.findUserByInvitation(invitation);
+            if (!user.isDeleted()) {
+                throw new NotAllowedException(NOT_DELETED_INVITATION);
+            }
+            user.setDeleted(false);
+            userService.save(user);
+            return sendWelcomeBackEmail(user);
+        }
+
+        return resendInvitationEmail(invitationId);
     }
 
     public List<InvitationResponse> getAllInvitedUsers() {

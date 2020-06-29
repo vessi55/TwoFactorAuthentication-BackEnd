@@ -15,6 +15,7 @@ import twofactorauth.dto.user.ResetPasswordRequest;
 import twofactorauth.entity.Invitation;
 import twofactorauth.entity.LoginVerification;
 import twofactorauth.entity.User;
+import twofactorauth.enums.UserGender;
 import twofactorauth.enums.UserRole;
 import twofactorauth.enums.UserStatus;
 import twofactorauth.exception.*;
@@ -22,6 +23,7 @@ import twofactorauth.repository.UserRepository;
 import twofactorauth.util.MailContent;
 
 import javax.transaction.Transactional;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -40,9 +42,12 @@ public class UserService {
     private static final String ADMIN_NOT_FOUND = "Not Found User With Role ADMIN";
     private static final String SUCCESSFULLY_CHANGED_PASSWORD = "Successfully Changed Password!";
     private static final String RESET_PASSWORD_EMAIL_NOT_SENT = "Reset password email has not been sent to user with ID : ";
+    private static final String INVALID_GENDER = "Invalid Gender !";
 
     private static final Long REGISTER_EMAIL_EXPIRATION_TIME = TimeUnit.HOURS.toMillis(24);
     private static final Long RESET_PASSWORD_EXPIRATION_TIME = TimeUnit.HOURS.toMillis(2);
+
+    private static final List<UserGender> USER_GENDERS = List.of(UserGender.values());
 
     @Autowired
     private UserRepository userRepository;
@@ -131,13 +136,20 @@ public class UserService {
 
     private User saveUserInformation(UserRegistrationRequest userRegistrationRequest, Invitation invitation) {
 
+        UserGender userGender = UserGender.valueOf(userRegistrationRequest.getGender().toUpperCase());
+
+        if (!USER_GENDERS.contains(userGender)) {
+            throw new IllegalArgumentException(INVALID_GENDER);
+        }
+
         User user = User.builder()
                 .firstName(userRegistrationRequest.getFirstName())
                 .lastName(userRegistrationRequest.getLastName())
                 .email(userRegistrationRequest.getEmail())
                 .phone(userRegistrationRequest.getPhone())
-                .password(passwordEncoder.encode(userRegistrationRequest.getPassword()))
+                .gender(userGender)
                 .role(UserRole.USER)
+                .password(passwordEncoder.encode(userRegistrationRequest.getPassword()))
                 .invitation(invitation).build();
 
         return userRepository.save(user);
@@ -164,8 +176,7 @@ public class UserService {
     }
 
     public User findUserByInvitation(Invitation invitation) {
-        Optional<User> user = userRepository.findByInvitation(invitation);
-        return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + invitation.getEmail()));
+        return userRepository.findByInvitation(invitation).orElse(null);
     }
 
     public UserResponse loginUser(UserLoginRequest userLoginRequest) {

@@ -5,6 +5,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import twofactorauth.entity.Invitation;
 import twofactorauth.entity.User;
+import twofactorauth.enums.UserGender;
 import twofactorauth.enums.UserRole;
 import twofactorauth.enums.UserStatus;
 import twofactorauth.repository.UserRepository;
@@ -26,7 +27,8 @@ public class BasicInserts {
         Invitation invitation = new Invitation("twofactorauthProject@outlook.com",
                 UserRole.ADMIN, UserStatus.REGISTERED, "ADMIN1");
 
-        User admin = new User("Vesela", "Kotseva", UserRole.ADMIN, "twofactorauthProject@outlook.com",
+        User admin = new User("Vesela", "Kotseva", UserRole.ADMIN,
+                UserGender.FEMALE, "twofactorauthProject@outlook.com",
                 passwordEncoder.encode("admin"), "0888102030", invitation);
 
         if (!userRepository.findByEmailAndIsDeleted(admin.getEmail(), false).isPresent()) {

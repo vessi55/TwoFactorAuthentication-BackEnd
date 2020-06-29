@@ -28,13 +28,15 @@ import java.io.IOException;
 @Slf4j
 public class JwtRequestFilter extends OncePerRequestFilter {
 
-    public static final String AUTHORIZATION = "Authorization";
-    public static final String BEARER = "Bearer ";
-    public static final String TOKEN_MISSING = "Token missing";
-    public static final String USER_WAS_DELETED = "User was deleted!";
-    public static final String APPLICATION_JSON = "application/json";
-    public static final String UNABLE_TO_GET_TOKEN = "Unable to get token";
-    public static final String TOKEN_EXPIRED = "Token expired";
+    private static final int BEARER_PREFIX_LENGHT = 7;
+    private static final String BEARER = "Bearer ";
+    private static final String AUTHORIZATION = "Authorization";
+    private static final String USER_WAS_DELETED = "User was deleted !";
+    private static final String APPLICATION_JSON = "application/json";
+    private static final String TOKEN_MISSING = "JWT Token is Missing !";
+    private static final String TOKEN_EXPIRED = "JWT Token has Expired !";
+    private static final String UNABLE_TO_GET_TOKEN = "Unable to get token";
+
     @Autowired
     private JwtUserDetailsService jwtUserDetailsService;
 
@@ -64,23 +66,14 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     private void tryAcquiringAccessToken(HttpServletRequest request, HttpServletResponse response,
                                          FilterChain chain, String requestTokenHeader) throws IOException, ServletException {
         try {
-            String jwtToken = requestTokenHeader;
+            String jwtToken = requestTokenHeader.substring(BEARER_PREFIX_LENGHT);
 
             Claims claims = jwtTokenUtil.getAllClaimsFromToken(jwtToken);
             String email = claims.getSubject();
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                User user = userService.findUserByEmail(email);
-                request.setAttribute("userId", user.getUid());
-
-                UserDetails userDetails = this.jwtUserDetailsService.loadUserByUsername(email);
-                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+                authenticateUser(request, email);
             }
-
             chain.doFilter(request, response);
 
         } catch (ElementNotFoundException e) {
@@ -90,6 +83,18 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         } catch (ExpiredJwtException e) {
             errorResponse(response, TOKEN_EXPIRED, HttpStatus.FORBIDDEN);
         }
+    }
+
+    private void authenticateUser(HttpServletRequest request, String email) {
+        User user = userService.findUserByEmail(email);
+        request.setAttribute("userId", user.getUid());
+
+        UserDetails userDetails = this.jwtUserDetailsService.loadUserByUsername(email);
+        UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+        usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+        SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
     }
 
     private void errorResponse(HttpServletResponse response, String message, HttpStatus httpStatus) throws IOException {

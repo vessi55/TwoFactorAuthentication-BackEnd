@@ -17,13 +17,13 @@ import java.util.stream.Collectors;
 public class JwtTokenUtil {
 
     @Value("${jwt.expiration}")
-    private long jwtTokenValidity;
+    private long JWTexpiration;
 
     @Value("${jwt.secret}")
-    private String secret;
+    private String JWTsecret;
 
     Claims getAllClaimsFromToken(String token) {
-        return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
+        return Jwts.parser().setSigningKey(JWTsecret).parseClaimsJws(token).getBody();
     }
 
     public String generateToken(UserDetails userDetails) {
@@ -42,7 +42,7 @@ public class JwtTokenUtil {
                 .setClaims(claims)
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + jwtTokenValidity * 1000))
-                .signWith(SignatureAlgorithm.HS512, secret).compact();
+                .setExpiration(new Date(System.currentTimeMillis() + JWTexpiration * 1000))
+                .signWith(SignatureAlgorithm.HS512, JWTsecret).compact();
     }
 }

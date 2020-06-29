@@ -11,6 +11,6 @@ import javax.validation.constraints.Pattern;
 @AllArgsConstructor
 public class InvitationRequest {
 
-    @Pattern(regexp = ".+@.+\\.[a-z]+", message = "Invalid email address!")
+//    @Pattern(regexp = ".+@.+\\.[a-z]+", message = "Invalid email address!")
     private String email;
 }

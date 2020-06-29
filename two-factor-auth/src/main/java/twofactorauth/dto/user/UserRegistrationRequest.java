@@ -36,6 +36,9 @@ public class UserRegistrationRequest {
     private String phone;
 
     @NotBlank
+    private String gender;
+
+    @NotBlank
     @Size(min = 6, max = 6, message = "Verification Code Length must be 6 symbols!")
     private String verificationCode;
 }

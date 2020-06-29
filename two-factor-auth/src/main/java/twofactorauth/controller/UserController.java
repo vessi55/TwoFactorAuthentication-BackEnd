@@ -35,13 +35,13 @@ public class UserController {
         return ResponseEntity.ok(userService.loginUser(user));
     }
 
-    @PutMapping("/verify/email/{email}")
-    public ResponseEntity<LoginVerificationResponse> sendLoginVerificationEmail(@PathVariable(value = "email") String email) {
+    @PutMapping("/verify/email")
+    public ResponseEntity<LoginVerificationResponse> sendLoginVerificationEmail(@RequestParam("email") String email) {
         return ResponseEntity.ok(userService.sendLoginVerificationEmail(email));
     }
 
-    @PutMapping("/verify/phone/{phone}")
-    public ResponseEntity<LoginVerificationResponse> sendLoginVerificationSMS(@PathVariable(value = "phone") String phone) throws IOException {
+    @PutMapping("/verify/phone")
+    public ResponseEntity<LoginVerificationResponse> sendLoginVerificationSMS(@RequestParam("phone") String phone) throws IOException {
         return ResponseEntity.ok(userService.sendLoginVerificationSMS(phone));
     }
 
