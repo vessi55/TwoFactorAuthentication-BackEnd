@@ -1,5 +1,6 @@
 package twofactorauth.service;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,20 +28,15 @@ import java.util.stream.Collectors;
 @Service
 public class InvitationService {
 
-    private static final String EMAIL_ALREADY_TAKEN = "Email is already taken by another user!";
-    private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
-    private static final String USER_WITH_EMAIL_NOT_FOUND = "Not Found User With Email : ";
-    private static final String USER_ALREADY_REGISTERED = "Already Registered User With Email : ";
-    private static final String INVITATION_DELETED = "Already Deleted Invitation With ID : ";
+    private static final String EMAIL_ALREADY_TAKEN = "Email is already taken by another user !";
+    private static final String USER_WITH_NOT_FOUND = "User does not exist !";
+    private static final String USER_ALREADY_EXISTS = "User already exists !";
+    private static final String INVITATION_DELETED = "Already Deleted Invitation With Email : ";
     private static final String NOT_DELETED_INVITATION = "Not Deleted Invitation !";
-    private static final String SUCCESSFULLY_DELETED_INVITATION = "Successfully deleted invitation with ID : ";
-    private static final String SUCCESSFULLY_SENT_INVITATION_EMAIL = "Invitation Email is Sent Successfully ! ";
+    private static final String SUCCESSFULLY_DELETED_INVITATION = "Invitation is Successfully Deleted ! ";
+    private static final String INVITATION_EMAIL_SUCCESS = "Invitation Email is Sent Successfully ! ";
 
-    private static final String UPPERCASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final String LOWERCASE_LETTERS  = "abcdefghijklmnopqrstuvxyz";
-    private static final String DIGITS = "0123456789";
-
-    private static final int REGISTRATION_CODE_LENGTH = 6;
+    private static final int REGISTRATION_VERIFICATION_CODE_LENGTH = 6;
 
     private static final Long REGISTER_EMAIL_EXPIRATION_TIME = TimeUnit.HOURS.toMillis(24);
 
@@ -66,7 +62,7 @@ public class InvitationService {
 
     public Invitation findInvitationById(String id) {
         Optional<Invitation> invitation = invitationRepository.findById(id);
-        return invitation.orElseThrow(() -> new ElementNotFoundException(USER_WITH_ID_NOT_FOUND + id));
+        return invitation.orElseThrow(() -> new ElementNotFoundException(USER_WITH_NOT_FOUND));
     }
 
     public Invitation findInvitationByEmail(String email) {
@@ -76,7 +72,7 @@ public class InvitationService {
     public Invitation getInvitedUser(UserRegistrationRequest userRegistrationRequest) {
         Invitation invitation = findInvitationByEmail(userRegistrationRequest.getEmail());
         if (invitation == null) {
-            throw new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + userRegistrationRequest.getEmail());
+            throw new ElementNotFoundException(USER_WITH_NOT_FOUND);
         }
         return invitation;
     }
@@ -87,17 +83,7 @@ public class InvitationService {
     }
 
     private String generateRegistrationVerificationCode() {
-
-        String alphaNumericString = UPPERCASE_LETTERS + LOWERCASE_LETTERS + DIGITS;
-
-        StringBuilder stringBuilder = new StringBuilder();
-
-        for (int i = 0; i < REGISTRATION_CODE_LENGTH; i++) {
-
-            int index = (int)(alphaNumericString.length() * Math.random());
-            stringBuilder.append(alphaNumericString.charAt(index));
-        }
-        return stringBuilder.toString();
+        return RandomStringUtils.randomAlphanumeric(REGISTRATION_VERIFICATION_CODE_LENGTH);
     }
 
     private Invitation saveInvitation(InvitationRequest invitationRequest) {
@@ -121,7 +107,7 @@ public class InvitationService {
         mailService.sendRegistrationMail(new MailContent
                 (invitation.getEmail(), adminName, invitation.getVerificationCode()), invitation);
 
-        return SUCCESSFULLY_SENT_INVITATION_EMAIL;
+        return INVITATION_EMAIL_SUCCESS;
     }
 
     public String resendInvitationEmail(String invitationId) {
@@ -131,10 +117,10 @@ public class InvitationService {
 
         Invitation invitation = findInvitationById(invitationId);
         if (invitation.getStatus() != UserStatus.INVITED) {
-            throw new NotAllowedException(USER_ALREADY_REGISTERED + invitation.getEmail());
+            throw new NotAllowedException(USER_ALREADY_EXISTS);
         }
         if(invitation.isDeleted()) {
-            throw new ElementNotFoundException(INVITATION_DELETED + invitationId);
+            throw new ElementNotFoundException(INVITATION_DELETED + invitation.getEmail());
         }
         // reedify 'setUp account' link in email after resend invitation email
         invitation.setCreatedDate(System.currentTimeMillis());
@@ -144,7 +130,7 @@ public class InvitationService {
         mailService.sendRegistrationMail(new MailContent(
                 invitation.getEmail(), adminName, verificationCode), invitation);
 
-        return SUCCESSFULLY_SENT_INVITATION_EMAIL;
+        return INVITATION_EMAIL_SUCCESS;
     }
 
     public String sendWelcomeBackEmail(User user) {
@@ -152,7 +138,7 @@ public class InvitationService {
 
         mailService.sendWelcomeBackMail(new MailContent(user.getEmail(), name));
 
-        return SUCCESSFULLY_SENT_INVITATION_EMAIL;
+        return INVITATION_EMAIL_SUCCESS;
     }
 
     public EmailLinkValidResponse checkIfRegisterLinkIsValid(String invitationId) {
@@ -170,7 +156,7 @@ public class InvitationService {
 
         Invitation invitation = findInvitationById(invitationId);
         if (invitation.isDeleted()) {
-            throw new NotAllowedException(INVITATION_DELETED + invitationId);
+            throw new NotAllowedException(INVITATION_DELETED + invitation.getEmail());
         }
         invitation.setDeleted(true);
 
@@ -180,7 +166,7 @@ public class InvitationService {
                 user.setDeleted(true);
                 userService.save(user);
             } else {
-                throw new ElementNotFoundException(USER_WITH_ID_NOT_FOUND + invitationId);
+                throw new ElementNotFoundException(USER_WITH_NOT_FOUND);
             }
         } else {
             // invalidate 'setUp account' link in email after deleted invitation

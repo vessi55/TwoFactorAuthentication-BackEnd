@@ -54,8 +54,8 @@ public class User {
     @Column(name = "is_deleted", nullable = false, columnDefinition = "tinyint default 0")
     private boolean isDeleted;
 
-    @Column(name = "password_reset_date")
-    private Long passwordResetDate;
+    @Column(name = "reset_password_date")
+    private Long resetPasswordDate;
 
     @NonNull
     @OneToOne(cascade = CascadeType.ALL)

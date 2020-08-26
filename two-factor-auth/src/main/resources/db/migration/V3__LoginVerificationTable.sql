@@ -6,7 +6,7 @@ USE `two-factor-auth` ;
 CREATE TABLE IF NOT EXISTS `two-factor-auth`.`login_verification` (
   `uid` VARCHAR(255) NOT NULL,
   `login_date` BIGINT(20) NOT NULL,
-  `verification_code` INT(11) NOT NULL,
+  `verification_code` VARCHAR(6) NOT NULL,
   `user_id` VARCHAR(255) NOT NULL,
   PRIMARY KEY (`uid`),
   INDEX `FKf09bsfpmtpvmfa9axd0phmecc` (`user_id` ASC) VISIBLE,

@@ -25,7 +25,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler({ElementAlreadyExistsException.class, PasswordsDoNotMatchException.class,
-            NotAllowedException.class, InvalidVerificationCodeException.class, NotAllowedException.class})
+            NotAllowedException.class, VerificationCodeException.class, NotAllowedException.class})
     @ResponseStatus(value = HttpStatus.BAD_REQUEST)
     private ResponseEntity<ErrorMessage> handleBadRequest(Exception e) {
         return new ResponseEntity<>(new ErrorMessage(HttpStatus.BAD_REQUEST, e.getMessage()), HttpStatus.BAD_REQUEST);

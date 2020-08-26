@@ -12,7 +12,7 @@ import javax.validation.constraints.Size;
 @AllArgsConstructor
 public class ResetPasswordRequest {
 
-    private String uid;
+    private String id;
 
     @NotBlank(message = "Password must not be empty!")
     @Size(min = 6, message = "Password Length must be at least 6 symbols!")

@@ -97,6 +97,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
     }
 
+
     private void errorResponse(HttpServletResponse response, String message, HttpStatus httpStatus) throws IOException {
         log.error(message);
         response.setStatus(httpStatus.value());
@@ -108,14 +109,20 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         String servletPath = request.getServletPath();
 
-        return isUserPathPermitted(request) ||
-                isActuatorPathPermitted(servletPath) ||
-                isSwaggerPathPermitted(servletPath);
+        return isUserPathPermitted(request)
+                || isGetInvitationPathPermitted(request)
+                || isActuatorPathPermitted(servletPath)
+                || isSwaggerPathPermitted(servletPath);
     }
 
     private boolean isUserPathPermitted(HttpServletRequest request) {
 
-        return request.getServletPath().startsWith("/users") ;
+        return request.getServletPath().startsWith("/users");
+    }
+
+    private boolean isGetInvitationPathPermitted(HttpServletRequest request) {
+
+        return request.getServletPath().startsWith("/invitations/id");
     }
 
     private boolean isActuatorPathPermitted(String servletPath) {

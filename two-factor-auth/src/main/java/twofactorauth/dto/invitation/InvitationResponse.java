@@ -14,4 +14,6 @@ public class InvitationResponse {
     private String email;
 
     private String status;
+
+    private String verificationCode;
 }

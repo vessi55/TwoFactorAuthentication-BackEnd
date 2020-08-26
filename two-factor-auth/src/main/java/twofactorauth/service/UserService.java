@@ -35,17 +35,21 @@ public class UserService {
     private static final String NOT_MATCHING_PASSWORDS = "Passwords do not match!";
     private static final String WRONG_CREDENTIALS = "Wrong Credentials";
     private static final String INVALID_VERIFICATION_CODE = "Invalid Verification Code!";
+    private static final String VERIFICATION_CODE_HAS_EXPIRED = "Verification Code Has Expired !";
     private static final String TOKEN_HAS_EXPIRED = "Token has expired";
     private static final String USER_WITH_ID_NOT_FOUND = "Not Found User With ID : ";
-    private static final String USER_WITH_EMAIL_NOT_FOUND = "Not Found User With Email : ";
     private static final String USER_WITH_PHONE_NOT_FOUND = "Not Found User With Phone Number : ";
+    private static final String USER_WITH_EMAIL_NOT_FOUND = "User with this email does not exist !";
     private static final String ADMIN_NOT_FOUND = "Not Found User With Role ADMIN";
     private static final String SUCCESSFULLY_CHANGED_PASSWORD = "Successfully Changed Password!";
-    private static final String RESET_PASSWORD_EMAIL_NOT_SENT = "Reset password email has not been sent to user with ID : ";
+    private static final String RESET_PASS_EMAIL_SUCCESS = "Reset Password Email is Sent Successfully ! ";
+    private static final String RESET_PASS_DATE_ERROR = "Error with reset password date";
     private static final String INVALID_GENDER = "Invalid Gender !";
 
+
     private static final Long REGISTER_EMAIL_EXPIRATION_TIME = TimeUnit.HOURS.toMillis(24);
-    private static final Long RESET_PASSWORD_EXPIRATION_TIME = TimeUnit.HOURS.toMillis(2);
+    private static final Long RESET_PASSWORD_EXPIRATION_TIME = TimeUnit.MINUTES.toMillis(30);
+    private static final Long LOGIN_VERIFICATION_EXPIRATION_TIME = TimeUnit.MINUTES.toMillis(1);
 
     private static final List<UserGender> USER_GENDERS = List.of(UserGender.values());
 
@@ -80,15 +84,6 @@ public class UserService {
         userRepository.save(user);
     }
 
-    private UserResponse getUserResponse(User user) {
-
-        final UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(user.getEmail());
-
-        UserResponse userResponse = modelMapper.map(user, UserResponse.class);
-        userResponse.setToken(jwtTokenUtil.generateToken(userDetails));
-        return userResponse;
-    }
-
     @Transactional
     public UserResponse registerUser(UserRegistrationRequest userRegistrationRequest) {
 
@@ -98,7 +93,7 @@ public class UserService {
 
         Invitation invitation = invitationService.getInvitedUser(userRegistrationRequest);
 
-        checkIfVerificationCodeIsValid(userRegistrationRequest, invitation);
+        checkIfRegistrationVerificationCodeIsValid(userRegistrationRequest, invitation);
 
         // invalidate 'setUp account' link in email after successful registration
         invitation.setCreatedDate(System.currentTimeMillis() - REGISTER_EMAIL_EXPIRATION_TIME);
@@ -107,7 +102,7 @@ public class UserService {
 
         User user = saveUserInformation(userRegistrationRequest, invitation);
 
-        return getUserResponse(user);
+        return modelMapper.map(user, UserResponse.class);
     }
 
     private void checkIfEmailAlreadyTaken(String email) {
@@ -128,9 +123,9 @@ public class UserService {
         }
     }
 
-    private void checkIfVerificationCodeIsValid(UserRegistrationRequest userRegistrationRequest, Invitation invitation) {
+    private void checkIfRegistrationVerificationCodeIsValid(UserRegistrationRequest userRegistrationRequest, Invitation invitation) {
         if(!userRegistrationRequest.getVerificationCode().equals(invitation.getVerificationCode())) {
-            throw new InvalidVerificationCodeException(INVALID_VERIFICATION_CODE);
+            throw new VerificationCodeException(INVALID_VERIFICATION_CODE);
         }
     }
 
@@ -162,7 +157,7 @@ public class UserService {
 
     public User findUserByEmail(String email) {
         Optional<User> user = userRepository.findByEmailAndIsDeleted(email, false);
-        return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + email));
+        return user.orElseThrow(() -> new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND));
     }
 
     public User findUserByPhone(String phone) {
@@ -182,7 +177,7 @@ public class UserService {
     public UserResponse loginUser(UserLoginRequest userLoginRequest) {
 
         User user = userRepository.findByEmailAndIsDeleted(userLoginRequest.getEmail(), false)
-                .orElseThrow(() -> new ElementNotFoundException(USER_WITH_EMAIL_NOT_FOUND + userLoginRequest.getEmail()));
+                .orElseThrow(() -> new BadCredentialsException(WRONG_CREDENTIALS));
 
         try {
             authenticate(userLoginRequest, user);
@@ -190,7 +185,7 @@ public class UserService {
             throw new TokenExpiredException(TOKEN_HAS_EXPIRED);
         }
 
-        return getUserResponse(user);
+        return modelMapper.map(user, UserResponse.class);
     }
 
     private void authenticate(UserLoginRequest userLoginRequest, User user) {
@@ -205,7 +200,6 @@ public class UserService {
         String formatUserName = user.getFirstName() + " " + user.getLastName();
 
         LoginVerification loginVerification = loginVerificationService.getLoginVerificationByUser(user);
-
         mailService.sendLoginVerificationMail(new MailContent(email, formatUserName, loginVerification.getVerificationCode()));
 
         return modelMapper.map(loginVerification, LoginVerificationResponse.class);
@@ -216,36 +210,68 @@ public class UserService {
         User user = findUserByPhone(phone);
 
         LoginVerification loginVerification = loginVerificationService.getLoginVerificationByUser(user);
-
         smsService.sendLoginVerificationSMS(user.getPhone(), loginVerification.getVerificationCode());
 
         return modelMapper.map(loginVerification, LoginVerificationResponse.class);
     }
 
-    public void sendResetPasswordEmail(String email) {
+    private UserResponse getAuthenticatedUserResponse(User user) {
+
+        final UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(user.getEmail());
+
+        UserResponse userResponse = modelMapper.map(user, UserResponse.class);
+        userResponse.setToken(jwtTokenUtil.generateToken(userDetails));
+        return userResponse;
+    }
+
+    private void checkIfLoginVerificationCodeExpired(LoginVerification loginVerification) {
+        long currentDate = System.currentTimeMillis();
+        long expirationDate = loginVerification.getLoginDate() + LOGIN_VERIFICATION_EXPIRATION_TIME;
+        boolean isCodeExpired = currentDate >= expirationDate;
+        if(isCodeExpired) {
+            throw new VerificationCodeException(VERIFICATION_CODE_HAS_EXPIRED);
+        }
+    }
+
+    public UserResponse submitLoginVerificationCode(String email, String verificationCode) {
+        User user = findUserByEmail(email);
+        LoginVerification loginVerification = loginVerificationService.findLoginVerificationByUser(user);
+        checkIfLoginVerificationCodeExpired(loginVerification);
+
+        if(!verificationCode.equals(loginVerification.getVerificationCode())) {
+            throw new VerificationCodeException(INVALID_VERIFICATION_CODE);
+        }
+
+        UserResponse authenticatedUser = getAuthenticatedUserResponse(user);
+        return authenticatedUser;
+    }
+
+    public String sendResetPasswordEmail(String email) {
 
         User user = findUserByEmail(email);
-        user.setPasswordResetDate(System.currentTimeMillis());
+        user.setResetPasswordDate(System.currentTimeMillis());
+        userRepository.save(user);
 
         String formatUserName = user.getFirstName() + " " + user.getLastName();
 
         mailService.sendForgottenPasswordMail(new MailContent(email, formatUserName));
+
+        return RESET_PASS_EMAIL_SUCCESS;
     }
 
     private void checkResetPasswordDate(User user) {
-        if (user.getPasswordResetDate() == null) {
-            throw new NotAllowedException(RESET_PASSWORD_EMAIL_NOT_SENT + user.getUid());
+        if (user.getResetPasswordDate() == null) {
+            throw new NotAllowedException(RESET_PASS_DATE_ERROR);
         }
     }
 
     public EmailLinkValidResponse checkIfResetPassLinkIsValid(String userId) {
-
         User user = findUserById(userId);
 
         checkResetPasswordDate(user);
 
         long currentDate = System.currentTimeMillis();
-        long expirationDate = user.getPasswordResetDate() + RESET_PASSWORD_EXPIRATION_TIME;
+        long expirationDate = user.getResetPasswordDate() + RESET_PASSWORD_EXPIRATION_TIME;
         boolean isUrlExpired = currentDate >= expirationDate;
 
         return new EmailLinkValidResponse(user.getEmail(), isUrlExpired);
@@ -255,11 +281,13 @@ public class UserService {
 
         checkIfMatchingPasswords(resetPasswordRequest.getPassword(), resetPasswordRequest.getRepeatPassword());
 
-        User user = findUserById(resetPasswordRequest.getUid());
+        User user = findUserById(resetPasswordRequest.getId());
 
         checkResetPasswordDate(user);
 
-        user.setPassword(resetPasswordRequest.getPassword());
+        // invalidate 'reset password' link in email after successful password reset
+        user.setPassword(passwordEncoder.encode(resetPasswordRequest.getPassword()));
+        user.setResetPasswordDate(System.currentTimeMillis() - RESET_PASSWORD_EXPIRATION_TIME);
         userRepository.save(user);
 
         return SUCCESSFULLY_CHANGED_PASSWORD;

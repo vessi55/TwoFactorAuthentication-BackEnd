@@ -39,7 +39,7 @@ public class JwtTokenUtil {
     private String buildJWT(Map<String, Object> claims, String subject) {
 
         return Jwts.builder()
-                .setClaims(claims)
+                .setClaims(claims) 
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + JWTexpiration * 1000))

@@ -19,7 +19,7 @@ import java.util.List;
 @RequestMapping("/invitations")
 @PreAuthorize("hasRole('ADMIN')")
 public class InvitationController {
-
+    
     @Autowired
     private InvitationService invitationService;
 
@@ -39,7 +39,7 @@ public class InvitationController {
         return ResponseEntity.ok(invitationService.checkIfRegisterLinkIsValid(invitationId));
     }
 
-    @GetMapping("/{invitationId}")
+    @GetMapping("/id/{invitationId}")
     @PreAuthorize("permitAll()")
     public ResponseEntity<Invitation> getInvitationById(@PathVariable("invitationId") String invitationId) {
         return ResponseEntity.ok(invitationService.findInvitationById(invitationId));

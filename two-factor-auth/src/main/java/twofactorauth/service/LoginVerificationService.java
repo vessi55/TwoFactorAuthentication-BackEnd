@@ -1,5 +1,6 @@
 package twofactorauth.service;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -8,13 +9,11 @@ import twofactorauth.entity.User;
 import twofactorauth.repository.LoginVerificationRepository;
 
 import java.util.Optional;
-import java.util.Random;
 
 @Service
 public class LoginVerificationService {
 
-    private static final int LOW_VALUE_VERIFICATION_CODE = 100;
-    private static final int HIGH_VALUE_VERIFICATION_CODE = 999;
+    private static final int LOGIN_VERIFICATION_CODE_LENGTH = 6;
 
     @Autowired
     private LoginVerificationRepository loginVerificationRepository;
@@ -24,11 +23,15 @@ public class LoginVerificationService {
         return loginVerification.orElse(null);
     }
 
+    private String generateLoginVerificationCode() {
+        return RandomStringUtils.randomAlphanumeric(LOGIN_VERIFICATION_CODE_LENGTH);
+    }
+
     public LoginVerification getLoginVerificationByUser(User user) {
 
         LoginVerification loginVerification = findLoginVerificationByUser(user);
 
-        String verificationCode = String.valueOf(new Random().nextInt(HIGH_VALUE_VERIFICATION_CODE) + LOW_VALUE_VERIFICATION_CODE);
+        String verificationCode = generateLoginVerificationCode();
 
         if(loginVerification == null) {
             loginVerification = new LoginVerification(verificationCode, user);

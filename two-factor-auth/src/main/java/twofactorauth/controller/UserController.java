@@ -40,15 +40,19 @@ public class UserController {
         return ResponseEntity.ok(userService.sendLoginVerificationEmail(email));
     }
 
-    @PutMapping("/verify/phone")
+    @PutMapping("/verify/sms")
     public ResponseEntity<LoginVerificationResponse> sendLoginVerificationSMS(@RequestParam("phone") String phone) throws IOException {
         return ResponseEntity.ok(userService.sendLoginVerificationSMS(phone));
     }
 
-    @PostMapping("/send/reset")
-    public ResponseEntity sendResetPasswordEmail(@RequestBody @Valid ResetPasswordEmailRequest resetPasswordEmailRequest) {
-        userService.sendResetPasswordEmail(resetPasswordEmailRequest.getEmail());
-        return ResponseEntity.ok().build();
+    @PostMapping("/verification")
+    public ResponseEntity<UserResponse> submitLoginVerificationCode(@RequestBody @Valid UserVerificationRequest user) {
+        return ResponseEntity.ok(userService.submitLoginVerificationCode(user.getEmail(), user.getVerificationCode()));
+    }
+
+    @PostMapping("/reset")
+    public ResponseEntity<String> sendResetPasswordEmail(@RequestBody @Valid ResetPasswordEmailRequest resetPasswordEmailRequest) {
+        return ResponseEntity.ok(userService.sendResetPasswordEmail(resetPasswordEmailRequest.getEmail()));
     }
 
     @GetMapping("/reset/valid/{userId}")
