@@ -32,7 +32,6 @@ public class UserRegistrationRequest {
     private String repeatPassword;
 
     @NotBlank
-    @Pattern(regexp = "08[789]\\d{7}", message = "Invalid phone number!")
     private String phone;
 
     @NotBlank

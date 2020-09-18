@@ -263,21 +263,22 @@
                                                                 <table border="0" valign="top" cellspacing="0" cellpadding="0" width="100%" align="left" class="rnb-col-1">
                                                                     <tbody><tr>
                                                                         <td class="content-spacing" style="font-size:14px; font-family:'Comic Sans MS',cursive,sans-serif, sans-serif; color:#3c4858; line-height: 21px;">
-                                                                            <div style="text-align: left;" th:text="'Welcome Back, ' + ${userName} + ' !'"></div>
+                                                                            <div style="text-align: left;" th:text="'Добре дошли отново, ' + ${userName} + ' !'"></div>
                                                                             <div style="text-align: left;">&nbsp;</div>
-                                                                            <div style="text-align: left;">We are glad to hear you're back.</div>
+                                                                            <div style="text-align: left;">Радваме се да чуем, че отново сте тук!</div>
                                                                             <div style="text-align: left;">&nbsp;</div>
-                                                                            <div style="text-align: left;">You can log in using your past credentials.&nbsp;&nbsp;<span style="background-color: transparent;">If you don't remember it,<br>
-try resetting your password.&nbsp;</span></div>
+                                                                            <div style="text-align: left;">Можете да използвате миналите си имейл и парола, за да се впишете в системата.&nbsp;&nbsp;<span style="background-color: transparent;">
+                                                                                Ако не си ги спомняте, можете да промените паролата си.<br>
+                                                                            &nbsp</span></div>
                                                                             <div style="text-align: left;">&nbsp;</div>
 
                                                                             <div style="text-align: center; "><a
                                                                                     target="_blank"
                                                                                     th:href="${mailService.getLoginUrl()}"><u><strong><em><span
-                                                                                    style="font-size:18px">To visit our website please click here</span></em></strong></u></a>
+                                                                                    style="font-size:18px">За да посетите нашия сайт, може да кликнете на този линк.</span></em></strong></u></a>
                                                                             </div>
 
-                                                                            <div style="text-align: left;"><br>Best regards,<br>The Two Factor Authentication Team</div>
+                                                                            <div style="text-align: left;"><br>Поздрави,<br>Екипът на Двуфакторна Автентикация</div>
                                                                         </td>
                                                                     </tr></tbody>
                                                                 </table>

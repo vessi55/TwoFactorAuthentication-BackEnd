@@ -15,7 +15,8 @@ DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `two-factor-auth`.`users`
--- -----------------------------------------------------
+-- --------------------------------------------
+---------
 CREATE TABLE IF NOT EXISTS `two-factor-auth`.`users` (
   `uid` VARCHAR(255) NOT NULL,
   `email` VARCHAR(255) NOT NULL,
@@ -33,3 +34,4 @@ CREATE TABLE IF NOT EXISTS `two-factor-auth`.`users` (
     REFERENCES `two-factor-auth`.`invitations` (`uid`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4;
+

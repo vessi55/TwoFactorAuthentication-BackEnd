@@ -24,7 +24,7 @@ public class LoginVerificationService {
     }
 
     private String generateLoginVerificationCode() {
-        return RandomStringUtils.randomAlphanumeric(LOGIN_VERIFICATION_CODE_LENGTH);
+        return RandomStringUtils.randomNumeric(LOGIN_VERIFICATION_CODE_LENGTH);
     }
 
     public LoginVerification getLoginVerificationByUser(User user) {

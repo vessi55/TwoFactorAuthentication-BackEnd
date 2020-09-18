@@ -25,24 +25,25 @@ public class UserController {
         this.userService = userService;
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<UserResponse> registerUser(@RequestBody @Valid UserRegistrationRequest user) {
-        return ResponseEntity.ok(userService.registerUser(user));
-    }
-
     @PostMapping("/login")
     public ResponseEntity<UserResponse> loginUser(@RequestBody @Valid UserLoginRequest user) {
         return ResponseEntity.ok(userService.loginUser(user));
     }
 
+    @PostMapping("/register")
+    public ResponseEntity<UserResponse> registerUser(@RequestBody @Valid UserRegistrationRequest user) {
+        return ResponseEntity.ok(userService.registerUser(user));
+    }
+
+
     @PutMapping("/verify/email")
-    public ResponseEntity<LoginVerificationResponse> sendLoginVerificationEmail(@RequestParam("email") String email) {
-        return ResponseEntity.ok(userService.sendLoginVerificationEmail(email));
+    public ResponseEntity<LoginVerificationResponse> sendLoginVerificationEmail(@RequestBody @Valid LoginVerificationRequest loginVerificationRequest) {
+        return ResponseEntity.ok(userService.sendLoginVerificationEmail(loginVerificationRequest));
     }
 
     @PutMapping("/verify/sms")
-    public ResponseEntity<LoginVerificationResponse> sendLoginVerificationSMS(@RequestParam("phone") String phone) throws IOException {
-        return ResponseEntity.ok(userService.sendLoginVerificationSMS(phone));
+    public ResponseEntity<LoginVerificationResponse> sendLoginVerificationSMS(@RequestBody @Valid LoginVerificationRequest loginVerificationRequest) throws IOException {
+        return ResponseEntity.ok(userService.sendLoginVerificationSMS(loginVerificationRequest));
     }
 
     @PostMapping("/verification")

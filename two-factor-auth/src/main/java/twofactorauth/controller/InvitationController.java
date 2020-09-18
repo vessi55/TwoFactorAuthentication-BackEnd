@@ -24,12 +24,12 @@ public class InvitationController {
     private InvitationService invitationService;
 
     @PostMapping("/send")
-    public ResponseEntity<String> sendInvitationMail(@Valid @RequestBody InvitationRequest invitationRequest) {
+    public ResponseEntity<InvitationResponse> sendInvitationMail(@Valid @RequestBody InvitationRequest invitationRequest) {
         return ResponseEntity.ok(invitationService.sendInvitationEmail(invitationRequest));
     }
 
     @PutMapping("/resend/{invitationId}")
-    public ResponseEntity<String> resendInvitationEmail(@PathVariable("invitationId") String invitationId) {
+    public ResponseEntity<InvitationResponse> resendInvitationEmail(@PathVariable("invitationId") String invitationId) {
         return ResponseEntity.ok(invitationService.resendInvitationEmail(invitationId));
     }
 

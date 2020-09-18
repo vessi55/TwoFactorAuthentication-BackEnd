@@ -194,7 +194,9 @@ public class UserService {
         }
     }
 
-    public LoginVerificationResponse sendLoginVerificationEmail(String email) {
+    public LoginVerificationResponse sendLoginVerificationEmail(LoginVerificationRequest loginVerificationRequest) {
+
+        String email = loginVerificationRequest.getContact();
 
         User user = findUserByEmail(email);
         String formatUserName = user.getFirstName() + " " + user.getLastName();
@@ -205,7 +207,9 @@ public class UserService {
         return modelMapper.map(loginVerification, LoginVerificationResponse.class);
     }
 
-    public LoginVerificationResponse sendLoginVerificationSMS(String phone) {
+    public LoginVerificationResponse sendLoginVerificationSMS(LoginVerificationRequest loginVerificationRequest) {
+
+        String phone = loginVerificationRequest.getContact();
 
         User user = findUserByPhone(phone);
 

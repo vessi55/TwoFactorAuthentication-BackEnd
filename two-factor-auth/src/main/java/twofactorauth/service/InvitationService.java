@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 public class InvitationService {
 
     private static final String EMAIL_ALREADY_TAKEN = "Email is already taken by another user !";
-    private static final String USER_WITH_NOT_FOUND = "User does not exist !";
+    private static final String USER_DOES_NOT_EXIST = "User does not exist !";
     private static final String USER_ALREADY_EXISTS = "User already exists !";
     private static final String INVITATION_DELETED = "Already Deleted Invitation With Email : ";
     private static final String NOT_DELETED_INVITATION = "Not Deleted Invitation !";
@@ -62,7 +62,7 @@ public class InvitationService {
 
     public Invitation findInvitationById(String id) {
         Optional<Invitation> invitation = invitationRepository.findById(id);
-        return invitation.orElseThrow(() -> new ElementNotFoundException(USER_WITH_NOT_FOUND));
+        return invitation.orElseThrow(() -> new ElementNotFoundException(USER_DOES_NOT_EXIST));
     }
 
     public Invitation findInvitationByEmail(String email) {
@@ -72,7 +72,7 @@ public class InvitationService {
     public Invitation getInvitedUser(UserRegistrationRequest userRegistrationRequest) {
         Invitation invitation = findInvitationByEmail(userRegistrationRequest.getEmail());
         if (invitation == null) {
-            throw new ElementNotFoundException(USER_WITH_NOT_FOUND);
+            throw new ElementNotFoundException(USER_DOES_NOT_EXIST);
         }
         return invitation;
     }
@@ -83,7 +83,7 @@ public class InvitationService {
     }
 
     private String generateRegistrationVerificationCode() {
-        return RandomStringUtils.randomAlphanumeric(REGISTRATION_VERIFICATION_CODE_LENGTH);
+        return RandomStringUtils.randomNumeric(REGISTRATION_VERIFICATION_CODE_LENGTH);
     }
 
     private Invitation saveInvitation(InvitationRequest invitationRequest) {
@@ -98,7 +98,7 @@ public class InvitationService {
         return invitationRepository.save(invitation);
     }
 
-    public String sendInvitationEmail(InvitationRequest invitationRequest) {
+    public InvitationResponse sendInvitationEmail(InvitationRequest invitationRequest) {
 
         String adminName = getAdminName();
 
@@ -107,10 +107,10 @@ public class InvitationService {
         mailService.sendRegistrationMail(new MailContent
                 (invitation.getEmail(), adminName, invitation.getVerificationCode()), invitation);
 
-        return INVITATION_EMAIL_SUCCESS;
+        return modelMapper.map(invitation, InvitationResponse.class);
     }
 
-    public String resendInvitationEmail(String invitationId) {
+    public InvitationResponse resendInvitationEmail(String invitationId) {
 
         String adminName = getAdminName();
         String verificationCode = generateRegistrationVerificationCode();
@@ -130,7 +130,7 @@ public class InvitationService {
         mailService.sendRegistrationMail(new MailContent(
                 invitation.getEmail(), adminName, verificationCode), invitation);
 
-        return INVITATION_EMAIL_SUCCESS;
+        return modelMapper.map(invitation, InvitationResponse.class);
     }
 
     public String sendWelcomeBackEmail(User user) {
@@ -166,7 +166,7 @@ public class InvitationService {
                 user.setDeleted(true);
                 userService.save(user);
             } else {
-                throw new ElementNotFoundException(USER_WITH_NOT_FOUND);
+                throw new ElementNotFoundException(USER_DOES_NOT_EXIST);
             }
         } else {
             // invalidate 'setUp account' link in email after deleted invitation
@@ -174,7 +174,7 @@ public class InvitationService {
             invitationRepository.save(invitation);
         }
 
-        return SUCCESSFULLY_DELETED_INVITATION + invitationId;
+        return SUCCESSFULLY_DELETED_INVITATION;
     }
 
     @Transactional
@@ -197,7 +197,8 @@ public class InvitationService {
             return sendWelcomeBackEmail(user);
         }
 
-        return resendInvitationEmail(invitationId);
+        resendInvitationEmail(invitationId);
+        return INVITATION_EMAIL_SUCCESS;
     }
 
     public List<InvitationResponse> getAllInvitedUsers() {

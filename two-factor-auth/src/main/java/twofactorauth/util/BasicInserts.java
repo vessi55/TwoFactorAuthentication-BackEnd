@@ -27,9 +27,9 @@ public class BasicInserts {
         Invitation invitation = new Invitation("twofactorauthProject@outlook.com",
                 UserRole.ADMIN, UserStatus.REGISTERED, "ADMIN1");
 
-        User admin = new User("Vesela", "Kotseva", UserRole.ADMIN,
+        User admin = new User("Весела", "Коцева", UserRole.ADMIN,
                 UserGender.FEMALE, "twofactorauthProject@outlook.com",
-                passwordEncoder.encode("admin"), "0888102030", invitation);
+                passwordEncoder.encode("admin"), "+359888102030", invitation);
 
         if (!userRepository.findByEmailAndIsDeleted(admin.getEmail(), false).isPresent()) {
             userRepository.save(admin);

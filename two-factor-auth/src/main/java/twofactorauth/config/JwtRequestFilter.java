@@ -63,8 +63,8 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
     }
 
-    private void tryAcquiringAccessToken(HttpServletRequest request, HttpServletResponse response,
-                                         FilterChain chain, String requestTokenHeader) throws IOException, ServletException {
+    private void tryAcquiringAccessToken(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
+                                         String requestTokenHeader) throws IOException, ServletException {
         try {
             String jwtToken = requestTokenHeader.substring(BEARER_PREFIX_LENGHT);
 
@@ -107,12 +107,11 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
     private boolean isPathPermitted(HttpServletRequest request) {
 
-        String servletPath = request.getServletPath();
-
         return isUserPathPermitted(request)
                 || isGetInvitationPathPermitted(request)
-                || isActuatorPathPermitted(servletPath)
-                || isSwaggerPathPermitted(servletPath);
+                || isActuatorPathPermitted(request)
+                || isSwaggerPathPermitted(request)
+                || isDownloadArticleImagePermitted(request);
     }
 
     private boolean isUserPathPermitted(HttpServletRequest request) {
@@ -125,15 +124,20 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         return request.getServletPath().startsWith("/invitations/id");
     }
 
-    private boolean isActuatorPathPermitted(String servletPath) {
+    private boolean isDownloadArticleImagePermitted(HttpServletRequest request) {
 
-        return servletPath.startsWith("/actuator");
+        return request.getServletPath().startsWith("/articles/image");
     }
 
-    private boolean isSwaggerPathPermitted(String servletPath) {
+    private boolean isActuatorPathPermitted(HttpServletRequest request) {
 
-        return servletPath.startsWith("/swagger") ||
-                servletPath.startsWith("/v2/api-docs") ||
-                servletPath.startsWith("/webjars/springfox-swagger-ui/");
+        return request.getServletPath().startsWith("/actuator");
+    }
+
+    private boolean isSwaggerPathPermitted(HttpServletRequest request) {
+
+        return request.getServletPath().startsWith("/swagger") ||
+                request.getServletPath().startsWith("/v2/api-docs") ||
+                request.getServletPath().startsWith("/webjars/springfox-swagger-ui/");
     }
 }

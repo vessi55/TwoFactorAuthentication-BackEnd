@@ -19,6 +19,11 @@ public class ApplicationConfig {
 
     @Bean
     public ModelMapper modelMapper() {
-        return new ModelMapper();
+
+        ModelMapper modelMapper = new ModelMapper();
+
+        modelMapper.addMappings(new ArticleResponseMapper());
+
+        return modelMapper;
     }
 }
