@@ -24,7 +24,7 @@ public class BasicInserts {
     @PostConstruct
     public void init() {
 
-        Invitation invitation = new Invitation("twofactorauthProject@outlook.com",
+        Invitation invitation = new Invitation("admin@abv.bg",
                 UserRole.ADMIN, UserStatus.REGISTERED, "ADMIN1");
 
         User admin = new User("Весела", "Коцева", UserRole.ADMIN,
