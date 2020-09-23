@@ -28,7 +28,7 @@ public class BasicInserts {
                 UserRole.ADMIN, UserStatus.REGISTERED, "ADMIN1");
 
         User admin = new User("Весела", "Коцева", UserRole.ADMIN,
-                UserGender.FEMALE, "twofactorauthProject@outlook.com",
+                UserGender.FEMALE, "admin@abv.bg",
                 passwordEncoder.encode("admin"), "+359888102030", invitation);
 
         if (!userRepository.findByEmailAndIsDeleted(admin.getEmail(), false).isPresent()) {
